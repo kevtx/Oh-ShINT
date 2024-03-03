@@ -1,0 +1,34 @@
+name: VirusTotal
+enable: true
+url:
+  api: https://www.virustotal.com/api/v3
+  web: https://www.virustotal.com/gui/search
+ioc_types:
+  - Domain|api=domains
+  - IPv4|api=ip_addresses
+  - MD5|api=files
+  - SHA1|api=files
+  - SHA256|api=files
+key_length: 64
+auth_type: header=x-apikey
+capabilities:
+  asn: true
+templates:
+  url_api: $base/$type/$ioc
+  url_web: $base/$ioc
+response_datamap:
+  indicators:
+    harmless: data.attributes.last_analysis_stats.harmless
+    malicious: data.attributes.last_analysis_stats.malicious
+    suspicious: data.attributes.last_analysis_stats.suspicious
+    undetected: data.attributes.last_analysis_stats.undetected
+  asn:
+    asn: data.attributes.asn
+  other:
+    ts_last_analysis: data.attributes.last_analysis_date
+    ts_last_modification: data.attributes.last_modification_date
+    ts_last_submission: data.attributes.last_submission_date
+    ts_first_submission: data.attributes.first_submission_date
+    votes_harmless: data.attributes.total_votes.harmless
+    votes_malicious: data.attributes.total_votes.malicious
+    trusted_verdict: data.attributes.trusted_verdict.verdict
