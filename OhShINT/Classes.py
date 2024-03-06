@@ -270,7 +270,6 @@ class Provider(BaseModel):
         def __handle_var(var: str, locals: dict = locals()) -> str:
             var_name = var[3:]  # prefix == '$__'
 
-            print(locals)
             if var_name not in locals:
                 raise ValueError(f"Variable {var_name} not found in locals")
             if isinstance(locals[var_name], IOC):
