@@ -7,7 +7,7 @@ pycountry==22.3.5
 pydantic==1.10.9
 # pyperclip==1.8.2
 python-dotenv==1.0.0
-PyYAML==5.4.1
+PyYAML==6.0.1
 regex==2023.3.23
 rich==13.4.2
 tinydb-serialization==2.1.1
