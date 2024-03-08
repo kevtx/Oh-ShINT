@@ -8,11 +8,11 @@ This file is required within the local directory, and it must contain the API ke
 
 ## CLI
 
-Usage: `./ohshint.py COMMAND [OPTIONS] [ARGS] ...`
+Usage: `./oh-shint.py COMMAND [OPTIONS] [ARGS] ...`
 
 ### Command: `one`
 
-Usage: `./ohshint.py one [OPTIONS] IOC`
+Usage: `./oh-shint.py one [OPTIONS] IOC`
 
 #### Arguments
 
