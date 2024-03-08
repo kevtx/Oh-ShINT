@@ -11,28 +11,28 @@ from loguru import logger
 from .Classes import Provider
 from .History import Cache
 
-provider_yaml_dir = Path(__file__).parent / "Providers"
+provider_config_dir = Path(__file__).parent / "Providers"
 
 Providers: dict[str, Provider] = {}
 
 
-def get_provider_yml(provider_name: str) -> str:
+def get_provider_json(provider_name: str) -> str:
     raise NotImplementedError("This function is not implemented")
     logger.info(f"Searching for {provider_name} provider")
 
     regexp = re.compile(
-        fnmatch.translate(str(provider_yaml_dir.absolute()) + f"/{provider_name}.yml"),
+        fnmatch.translate(str(provider_yaml_dir.absolute()) + f"/{provider_name}.json"),
         re.IGNORECASE,
     )
 
     logger.debug(f"Regexp: {regexp.pattern}")
 
-    for yml in glob.iglob(
-        (str(provider_yaml_dir.absolute()) + "/*.yml"), recursive=False
+    for j in glob.iglob(
+        (str(provider_yaml_dir.absolute()) + "/*.json"), recursive=False
     ):
-        logger.debug(f"Checking {yml}")
-        if regexp.match(yml):
-            return yml
+        logger.debug(f"Checking {j}")
+        if regexp.match(j):
+            return j
 
 
 def __load_provider_key(provider: Provider) -> None:
@@ -57,22 +57,22 @@ def __load_provider_keys(providers: list[Provider]) -> None:
 
 
 def get_provider(name: str, load_key: bool) -> Provider:
-    p = Provider(str(provider_yaml_dir.absolute()) + f"/{name}.yml")
+    p = Provider(str(provider_config_dir.absolute()) + f"/{name}.json")
     if load_key:
         __load_provider_key(p)
     return p
 
 
 def get_available_providers_iter() -> Iterable[str]:
-    for yml in glob.iglob(
-        (str(provider_yaml_dir.absolute()) + "/*.yml"), recursive=False
+    for j in glob.iglob(
+        (str(provider_config_dir.absolute()) + "/*.json"), recursive=False
     ):
-        yield Path(yml).stem
+        yield Path(j).stem
 
 
 def get_all_providers(load_keys: bool) -> dict[str, Provider]:
     p = {
-        provider: Provider(str(provider_yaml_dir.absolute()) + f"/{provider}.yml")
+        provider: Provider(str(provider_config_dir.absolute()) + f"/{provider}.json")
         for provider in get_available_providers_iter()
     }
 

@@ -1,10 +1,10 @@
+import json
 from datetime import datetime
 from pathlib import Path
 from string import Template
 from typing import Union
 
 import httpx
-import yaml
 from httpx_cache import Client, FileCache
 from jsonpath_ng import parse
 from loguru import logger
@@ -69,7 +69,7 @@ class Provider(BaseModel):
     config_yml: Path
 
     def __init__(self, config_yml: Path | str) -> None:
-        data = self.__load_yaml(config_yml)
+        data = self.__load_json(config_yml)
 
         ioc_types: dict[str, dict] = {}
         for ti in data["ioc_types"]:
@@ -196,18 +196,18 @@ class Provider(BaseModel):
         else:
             return results
 
-    def __load_yaml(self, file_path: Path | str) -> dict:
+    def __load_json(self, file_path: Path | str) -> dict:
         if isinstance(file_path, str):
             file_path = Path(file_path)
 
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        with open(file_path, "r") as stream:
+        with open(file_path, "r") as f:
             try:
-                data = yaml.safe_load(stream)
-            except yaml.YAMLError as e:
-                raise ValueError(f"Error parsing file: {file_path}") from e
+                data = json.load(f)
+            except Exception as e:
+                raise e
 
         return data
 

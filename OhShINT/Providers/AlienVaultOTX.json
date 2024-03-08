@@ -1,0 +1,29 @@
+{
+  "name": "AlienVault",
+  "enable": true,
+  "url": {
+    "api": "https://otx.alienvault.com/api/v1/indicators",
+    "web": "https://otx.alienvault.com/indicator"
+  },
+  "ioc_types": [
+    "Domain|api=domain|web=domain",
+    "IPv4",
+    "IPv6",
+    "SHA1|api=file|web=SHA1",
+    "SHA256|api=file|web=SHA256"
+  ],
+  "key_length": 64,
+  "auth_type": "header=X-OTX-API-KEY",
+  "capabilities": {
+    "asn": false
+  },
+  "templates": {
+    "url_api": "$base/$type/$ioc",
+    "url_web": "$base/$type/$ioc"
+  },
+  "response_datamap": {
+    "indicators": {
+      "pulse_count": "pulse_info.count"
+    }
+  }
+}
