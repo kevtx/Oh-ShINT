@@ -11,8 +11,8 @@ from loguru import logger
 from pydantic import BaseModel, root_validator
 from pydantic.dataclasses import dataclass
 
-from .Functions import get_ioc_type
-from .History import Cache
+from OhShINT.Functions import get_ioc_type
+from OhShINT.History import Cache
 
 
 @dataclass
