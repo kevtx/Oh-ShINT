@@ -55,11 +55,16 @@ class GUI(Tk):
             logger.warning("No IOC provided")
             return
         logger.debug(f"Searching for {ioc}")
-        return
+        self.clear_results()
         for provider in PROVIDERS.values():
             try:
                 osint = provider.search(ioc)
-                logger.trace(f"{provider.NAME}: {osint.data['indicators']}")
+                self.result_table.insert(
+                    "",
+                    "end",
+                    values=(provider.NAME, osint.data["indicators"]),
+                )
+                # logger.trace(f"{provider.NAME}: {osint.data['indicators']}")
             except Exception as e:
                 logger.error(f"{provider.NAME}: Error: {e}")
 
