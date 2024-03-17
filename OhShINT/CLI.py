@@ -27,6 +27,7 @@ def start_gui(
     if logging:
         if verbose:
             __level = "TRACE"
+            logger.debug("Verbose logging enabled")
         else:
             __level = "INFO"
         logger.configure(handlers=[{"sink": sys.stdout, "level": __level}])
@@ -35,8 +36,8 @@ def start_gui(
     start()
 
 
-@Oh.command("one", help="Extract IOCs from a string")
-def ioc_one(
+@Oh.command("search", help="Search for an IOC in all providers")
+def search_ioc(
     ioc_value: Annotated[str, typer.Argument(..., help="The IOC to search for")],
     logging: bool = typer.Option(False, "--logging", "-l", help="Enable logging"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
