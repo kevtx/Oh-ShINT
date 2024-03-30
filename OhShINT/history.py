@@ -1,6 +1,5 @@
 import json
 import re
-from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
@@ -10,7 +9,7 @@ from tinydb.storages import JSONStorage
 from tinydb_serialization import SerializationMiddleware
 from tinydb_serialization.serializers import DateTimeSerializer
 
-from .Functions import get_ioc_type
+from .functions import get_ioc_type
 
 #   from tinydb.storages import JSONStorage
 #   from BetterJSONStorage import BetterJSONStorage # Disabled because it makes the JSON files unreadable

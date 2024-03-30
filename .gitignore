@@ -1,9 +1,5 @@
-monkeytype.sqlite3
-tests/
-tests/**
-test_*.py
-
-**/*___w.py
+**
+!OhShINT/
 
 .history.json
 .httpx_cache

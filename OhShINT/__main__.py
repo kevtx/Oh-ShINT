@@ -1,3 +1,3 @@
-from OhShINT.CLI import Oh
+from .cli import Oh
 
 Oh()

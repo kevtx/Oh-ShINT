@@ -7,8 +7,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from typing_extensions import Annotated
 
 from OhShINT import get_all_providers
-from OhShINT.Classes import IOC
-from OhShINT.Functions import get_ioc_type
+from OhShINT.functions import get_ioc_type
+from OhShINT.models import IOC
 
 logger.remove()
 
@@ -22,7 +22,7 @@ def start_gui(
     logging: bool = typer.Option(False, "--logging", "-l", help="Enable logging"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
-    from .GUI import start
+    from .gui import start
 
     if logging:
         if verbose:

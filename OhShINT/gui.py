@@ -1,7 +1,7 @@
 import customtkinter
 from loguru import logger
 
-# from OhShINT.CLI import md_one
+# from OhShINT.cli import md_one
 
 
 class InputFrame(customtkinter.CTkFrame):
