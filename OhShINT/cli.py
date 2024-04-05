@@ -35,7 +35,7 @@ def start_gui(
     start()
 
 
-@Oh.command("one", help="Extract IOCs from a string")
+@Oh.command("search", help="Search OSINT providers for a single IOC")
 def ioc_one(
     ioc_value: Annotated[str, typer.Argument(..., help="The IOC to search for")],
     logging: bool = typer.Option(False, "--logging", "-l", help="Enable logging"),

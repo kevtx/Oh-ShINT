@@ -231,8 +231,8 @@ class Provider(BaseModel):
             ioc = IOC(value=ioc, type=get_ioc_type(ioc))
 
         if ioc.type not in self.AVAILABLE_IOC_TYPES.keys():
-            logger.error(f"Invalid IOC type ({ioc.type})")
-            raise ValueError(f"Invalid IOC type ({ioc.type})")
+            logger.error(f"Unsupported IOC type ({ioc.type})")
+            raise ValueError(f"Unsupported IOC type ({ioc.type})")
         else:
             ioc_type = self.AVAILABLE_IOC_TYPES[ioc.type]
 

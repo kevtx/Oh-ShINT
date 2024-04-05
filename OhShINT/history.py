@@ -11,7 +11,6 @@ from tinydb_serialization.serializers import DateTimeSerializer
 
 from .functions import get_ioc_type
 
-#   from tinydb.storages import JSONStorage
 #   from BetterJSONStorage import BetterJSONStorage # Disabled because it makes the JSON files unreadable
 
 serialization = SerializationMiddleware(JSONStorage)
