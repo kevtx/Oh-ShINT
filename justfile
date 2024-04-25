@@ -1,38 +1,19 @@
 set windows-shell := ['powershell.exe', '-Command']
 
 name := "Oh-ShINT"
-python := '3.10'
+python_version := "3.10"
+env_yml := "environment.yml"
+
 
 default:
     just --list
 
+conda-env:
+    conda env create -f {{(quote(clean(env_yml)))}}
 
-init: && lint-init
-    @python -m pip install --upgrade pip
-    @python -m pip install -r requirements.txt
+activate:
+    conda activate {{name}}
 
-
-[unix]
-uninit:
-    @rm -rf .venv
-
-[unix]
-[confirm]
-clean-env: uninit
-    #!/usr/bin/env bash
-    set -euxo pipefail
-    bin=$(which python{{ python }})
-    virtualenv --python=$bin .venv
-
-[windows]
-[confirm]
-clean-env:
-    #!pwsh
-    Remove-Item -Recurse -Force .venv -ErrorAction SilentlyContinue ;
-    python -m virtualenv --python="$env:USERPROFILE\AppData\Local\Programs\Python\Python{{ replace(python,'.','') }}\python.exe" .venv
-
-alias cleanenv := clean-env
-alias clean-venv := clean-env
 
 [windows]
 lint-init:

@@ -1,0 +1,24 @@
+name: ohshint
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - httpx=0.26.0
+  - httpx-cache=0.13.0
+  - jsonpath-ng=1.6.1
+  - loguru=0.5.3
+  - pandas=2.2.1
+  - pip=24.0
+  - pycountry=22.3.5
+  - pydantic=1.10.12
+  - python=3.10
+  - python-dotenv=1.0.1
+  - pytz=2024.1
+  - regex=2023.10.3
+  - rich=13.3.5
+  - tinydb=4.8.0
+  - tk=8.6.12
+  - typer=0.9.0
+  - typing_extensions=4.9.0
+  - pip:
+      - tinydb-serialization==2.1.1

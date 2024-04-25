@@ -6,9 +6,9 @@ from rich import print
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from typing_extensions import Annotated
 
-from OhShINT import get_all_providers
-from OhShINT.functions import get_ioc_type
-from OhShINT.models import IOC
+from . import get_all_providers
+from .functions import get_ioc_type
+from .models import IOC
 
 logger.remove()
 
