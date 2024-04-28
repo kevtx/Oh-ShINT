@@ -372,8 +372,34 @@ class Provider(BaseModel):
             v = Provider.__extract_jsonpath(jsonmap, response)
             indicators[k] = v
 
+        if self.ASN_CAPABLE and "asn" in self.response_datamap:
+            asn = {}
+            try:
+                for k in self.response_datamap["asn"]:
+                    jsonmap = self.response_datamap["asn"][k]
+                    v = Provider.__extract_jsonpath(jsonmap, response)
+                    asn[k] = v
+            except Exception as e:
+                logger.debug(f"No ASN data found: {e}")
+                asn = None
+
+        if "other" in self.response_datamap:
+            other = {}
+            for k in self.response_datamap["other"]:
+                jsonmap = self.response_datamap["other"][k]
+                try:
+                    v = Provider.__extract_jsonpath(jsonmap, response)
+                    other[k] = v
+                except Exception as e:
+                    logger.error(f"Error extracting {k}")
+                    other[k] = None
+        else:
+            other = None
+
         return {
             "indicators": indicators,
+            "asn": asn if self.ASN_CAPABLE else None,
+            "other": other,
         }
 
     def search(

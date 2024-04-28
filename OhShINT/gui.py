@@ -33,7 +33,7 @@ class GUI(Tk):
         self.search_entry.grid(row=0, column=1, sticky="ew")
 
         self.search_submit = ttk.Button(
-            self.search_frame, text="Go", width=2, command=self.submit_search
+            self.search_frame, text="Go", width=5, command=self.submit_search
         )
         self.search_submit.grid(row=0, column=2, sticky="e")
 
@@ -64,7 +64,6 @@ class GUI(Tk):
                     "end",
                     values=(provider.NAME, osint.data["indicators"]),
                 )
-                # logger.trace(f"{provider.NAME}: {osint.data['indicators']}")
             except Exception as e:
                 logger.error(f"{provider.NAME}: Error: {e}")
 

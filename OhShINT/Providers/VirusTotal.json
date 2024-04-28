@@ -29,7 +29,8 @@
       "undetected": "data.attributes.last_analysis_stats.undetected"
     },
     "asn": {
-      "asn": "data.attributes.asn"
+      "asn": "data.attributes.asn",
+      "country": "data.attributes.country"
     },
     "other": {
       "ts_last_analysis": "data.attributes.last_analysis_date",
@@ -38,7 +39,8 @@
       "ts_first_submission": "data.attributes.first_submission_date",
       "votes_harmless": "data.attributes.total_votes.harmless",
       "votes_malicious": "data.attributes.total_votes.malicious",
-      "trusted_verdict": "data.attributes.trusted_verdict.verdict"
+      "trusted_verdict": "data.attributes.trusted_verdict.verdict",
+      "suggested_threat_label": "data.attributes.popular_threat_classification.suggested_threat_label"
     }
   }
 }
