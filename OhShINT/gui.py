@@ -7,6 +7,7 @@ from . import get_all_providers
 WINDOW_TITLE = "OhShINT"
 PROVIDERS = get_all_providers(load_keys=True)
 
+# Class for result table of each IOC type
 
 class GUI(Tk):
 

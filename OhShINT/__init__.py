@@ -31,14 +31,14 @@ def get_provider_json(provider_name: str) -> str:
     logger.info(f"Searching for {provider_name} provider")
 
     regexp = re.compile(
-        fnmatch.translate(str(provider_yaml_dir.absolute()) + f"/{provider_name}.json"),
+        fnmatch.translate(str(provider_config_dir.absolute()) + f"/{provider_name}.json"),
         re.IGNORECASE,
     )
 
     logger.debug(f"Regexp: {regexp.pattern}")
 
     for j in glob.iglob(
-        (str(provider_yaml_dir.absolute()) + "/*.json"), recursive=False
+        (str(provider_config_dir.absolute()) + "/*.json"), recursive=False
     ):
         logger.debug(f"Checking {j}")
         if regexp.match(j):

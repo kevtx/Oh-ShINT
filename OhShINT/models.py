@@ -74,7 +74,6 @@ class Provider(BaseModel):
         ioc_types: dict[str, dict] = {}
         for ti in data["ioc_types"]:
             logger.debug(f"Processing IOC type: {ti}")
-            r = {}
             if "=" in ti or "|" in ti:
                 try:
                     d, title = self.__parse_kvpstring_to_dict(
@@ -412,7 +411,7 @@ class Provider(BaseModel):
         #        only_return_data: bool = False,
         ignore_disabled: bool = False,
     ) -> OSINT:
-        if self.ENABLED == False and not ignore_disabled:
+        if not self.ENABLED and not ignore_disabled:
             raise ValueError(f"{self.NAME} provider is not enabled")
 
         if isinstance(ioc, str):
