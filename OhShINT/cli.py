@@ -7,7 +7,6 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from typing_extensions import Annotated
 
 from . import get_all_providers
-from .functions import get_ioc_type
 from .models import IOC
 
 logger.remove()
@@ -40,7 +39,7 @@ def ioc_one(
     ioc_value: Annotated[str, typer.Argument(..., help="The IOC to search for")],
     logging: bool = typer.Option(False, "--logging", "-l", help="Enable logging"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
-) -> str:
+):
     if logging:
         if verbose:
             __level = "TRACE"
@@ -54,7 +53,7 @@ def ioc_one(
         TextColumn("[progress.description]{task.description}"),
         transient=True,
     ) as progress:
-        ioc = IOC(ioc_value, get_ioc_type(ioc_value))
+        ioc = IOC.auto_type(ioc_value)
 
         description = f"Searching for [italic]{ioc.type}[/]: "
         description += f"[bold red]{ioc.value}[/]"

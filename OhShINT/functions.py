@@ -5,7 +5,7 @@ import regex as re
 from loguru import logger
 
 
-def get_country_by_alpha2(alpha2: str) -> pycountry.pycountry:
+def get_country_by_alpha2(alpha2: str):
     return pycountry.countries.get(alpha_2=alpha2)
 
 
@@ -25,8 +25,7 @@ def is_ipv4(ip: str) -> bool:
 
 def is_public_ip(ip: str) -> bool:
     try:
-        ip = ip_address(ip)
-        return ip.is_global
+        return ip_address(ip).is_global
     except ValueError:
         return False
 
@@ -84,7 +83,7 @@ def ioc_regex_search(regexp_name: str, search_content: str) -> list[str]:
         return matches
 
 
-def get_ioc_type(ioc_value: str, with_md_type: bool = False) -> str | tuple[str, str]:
+def get_ioc_type(ioc_value: str) -> tuple[str, str]:
     """
     Returns the type of an IOC
     - ioc_value: IOC string to get type from
@@ -132,7 +131,4 @@ def get_ioc_type(ioc_value: str, with_md_type: bool = False) -> str | tuple[str,
     got_type = types[0]
     logger.debug(f"Got IOC type: {got_type[0]}")
 
-    if with_md_type:
-        return got_type
-    else:
-        return got_type[0]
+    return got_type

@@ -1,8 +1,8 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from string import Template
-from typing import Union
+from typing import Optional, Union
 
 import httpx
 from httpx_cache import Client, FileCache
@@ -20,13 +20,18 @@ class IOC:
     value: str
     type: str
 
+    @classmethod
+    def auto_type(cls, value: str):
+        typ, _ = get_ioc_type(value)
+        return cls(value=value, type=typ)
+
 
 @dataclass
 class OSINT:
     ioc: IOC
     provider_name: str
     data: dict
-    timestamp: datetime = datetime.utcnow()
+    timestamp: datetime = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -58,14 +63,14 @@ class Provider(BaseModel):
     AVAILABLE_IOC_TYPES: dict
     ASN_CAPABLE: bool = False
     KEY_LENGTH: int
-    KEY: Key = None
+    KEY: Optional[Key] = None
     KEY_VALIDATED: bool = False
-    TEMPLATES: dict[str, str] = None
-    auth_type: str = None
-    auth_header: str = None
-    additional_headers: dict[str, str] = None
-    request_datamap: dict = None
-    response_datamap: dict = None
+    TEMPLATES: Optional[dict[str, str]] = None
+    auth_type: Optional[str] = None
+    auth_header: Optional[str] = None
+    additional_headers: Optional[dict[str, str]] = None
+    request_datamap: Optional[dict] = None
+    response_datamap: Optional[dict] = None
     config_yml: Path
 
     def __init__(self, config_yml: Path | str) -> None:
@@ -107,13 +112,13 @@ class Provider(BaseModel):
             logger.error(e)
             raise e
 
+        auth_header = None
         if auth_type == "header":
             logger.debug("Auth type is header; getting header name")
             auth_header = data["auth_type"].split("=")[1]
             logger.debug(f"Auth header: {auth_header}")
         elif auth_type == "none":
             logger.debug("Auth type is none; no header needed")
-            auth_header = None
 
         additional_headers = None
         if "additional_headers" in data:
@@ -227,7 +232,8 @@ class Provider(BaseModel):
 
     def __get_request_url(self, ioc: IOC | str, api: bool = True) -> str:
         if isinstance(ioc, str):
-            ioc = IOC(value=ioc, type=get_ioc_type(ioc))
+            got_type, _ = get_ioc_type(ioc)
+            ioc = IOC(value=ioc, type=got_type)
 
         if ioc.type not in self.AVAILABLE_IOC_TYPES.keys():
             logger.error(f"Unsupported IOC type ({ioc.type})")
@@ -415,7 +421,7 @@ class Provider(BaseModel):
             raise ValueError(f"{self.NAME} provider is not enabled")
 
         if isinstance(ioc, str):
-            ioc = IOC(value=ioc, type=get_ioc_type(ioc))
+            ioc = IOC.auto_type(ioc)
 
         #        x = (only_return_asn, only_return_indicators, only_return_data)
         #        if sum(x) > 1:
@@ -435,7 +441,8 @@ class Provider(BaseModel):
                 return OSINT(ioc=ioc, provider_name=self.NAME, data=cached[0]["data"])
 
         with Client(
-            cache=FileCache(cache_dir=Path(__file__).parent / ".cache" / "httpx")
+            cache=FileCache(cache_dir=Path(__file__).parent / ".cache" / "httpx"),
+            verify=False,  # TODO: Proxy isn't playing nice.
         ) as c:
             try:
                 logger.debug("Building request")

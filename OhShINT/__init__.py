@@ -7,6 +7,7 @@ from typing import Iterable
 
 from dotenv import dotenv_values
 from loguru import logger
+from tinydb.table import Document as TinyDocument
 
 from .functions import get_ioc_type
 from .history import Cache
@@ -31,7 +32,9 @@ def get_provider_json(provider_name: str) -> str:
     logger.info(f"Searching for {provider_name} provider")
 
     regexp = re.compile(
-        fnmatch.translate(str(provider_config_dir.absolute()) + f"/{provider_name}.json"),
+        fnmatch.translate(
+            provider_config_dir.absolute().joinpath(f"/{provider_name}.json")
+        ),
         re.IGNORECASE,
     )
 
@@ -50,10 +53,10 @@ def __load_provider_key(provider: Provider) -> None:
     logger.debug(f"Checking for {provider.NAME} key")
     if name in dotenv:
         logger.debug(f"Setting {provider.NAME} key")
-        try:
-            provider.set_key(dotenv[name], force=True)
-        except ValueError as e:
-            logger.error(e)
+        if k := dotenv.get(name):
+            provider.set_key(k, force=True)
+        else:
+            logger.error(f"Key not found: {k}")
     else:
         logger.warning(f"No key found for {provider.NAME} provider")
 
@@ -62,7 +65,7 @@ def __load_provider_keys(providers: list[Provider]) -> None:
     if not providers or len(providers) < 1:
         raise ValueError("No providers provided")
 
-    for provider in providers.values():
+    for provider in providers:
         __load_provider_key(provider)
 
 
@@ -87,7 +90,7 @@ def get_all_providers(load_keys: bool) -> dict[str, Provider]:
     }
 
     if load_keys:
-        __load_provider_keys(p)
+        __load_provider_keys(list(p.values()))
 
     return p
 
@@ -99,18 +102,18 @@ def load_providers_and_keys() -> None:
 
 def indicator_history_search(
     indicator: str, cache: Cache = Cache()
-) -> list[dict[str, str]]:
+) -> list[TinyDocument]:
     return cache.get(indicator)
 
 
 logger.remove()
 dotenv = {**dotenv_values(".env")}
 
-if "LOG_LEVEL" in dotenv:
-    if dotenv["LOG_LEVEL"] == "":
+if log_level := dotenv.get("LOG_LEVEL", ""):
+    if log_level == "":
         log_level = "INFO"
     else:
-        log_level = dotenv["LOG_LEVEL"].upper()
+        log_level = log_level.upper()
 
     logger.add(stderr, level=log_level)
     logger.info(f"Setting log level to {log_level}")
