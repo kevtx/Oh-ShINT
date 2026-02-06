@@ -1,0 +1,24 @@
+{
+    "ipv4": {
+        "1": {
+            "data": {
+                "asn": {
+                    "asn": "MEIDEN AMERICA INC",
+                    "country": "US",
+                    "type": "Fixed Line ISP"
+                },
+                "indicators": {
+                    "confidence": "10",
+                    "total_reports": "1"
+                },
+                "other": null
+            },
+            "ioc": {
+                "type": "IPv4",
+                "value": "12.34.199.115"
+            },
+            "provider_name": "AbuseIPDB",
+            "timestamp": "2026-02-06T17:06:59.229323+00:00"
+        }
+    }
+}

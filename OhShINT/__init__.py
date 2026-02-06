@@ -11,7 +11,7 @@ from tinydb.table import Document as TinyDocument
 
 from .functions import get_ioc_type
 from .history import Cache
-from .models import IOC, Provider
+from .models_old import IOC, Provider
 
 __all__ = [
     "IOC",

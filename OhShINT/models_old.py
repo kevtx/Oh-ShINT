@@ -42,6 +42,61 @@ class ASN:
     country_code: str
 
 
+class AuthMethod(httpx.Auth):
+    key: str
+    value: str
+
+    def __init__(self, key: str, value: str):
+        self.key = key
+        self.value = value
+
+
+class ParamAuth(AuthMethod):
+    def auth_flow(self, request):
+        request.url = request.url.copy_add_param(key=self.key, value=self.value)
+        yield request
+
+
+class HeaderAuth(AuthMethod):
+    def auth_flow(self, request):
+        request.headers[self.key] = self.value
+        yield request
+
+
+class ProviderBase:
+    @dataclass
+    class Key:
+        key: str
+        valid_key_length: int
+
+        @root_validator(allow_reuse=True)
+        def key_length(cls, values):
+            key = values.get("key")
+            valid_key_length = values.get("required_length")
+            if valid_key_length and len(key) != valid_key_length:
+                raise ValueError(f"Key must be {valid_key_length} characters long")
+            return values
+
+    name: str
+    api_base: str
+    auth_method = httpx.Auth
+    force_disable: bool = False
+    _auth_class: Optional[type] = None
+    _auth_key: Optional[str] = None
+    _key: Optional[Key] = None
+
+    def __init__(self, **kwargs):
+        self._key = kwargs.get("key")
+        super().__init__()
+        if self._auth_key and self._auth_class:
+            self.auth_method = self._auth_class(key=self._auth_key, value=self._key)
+
+    def is_enabled(self):
+        if self._key and not self.force_disable:
+            return True
+        return False
+
+
 class Provider(BaseModel):
     @dataclass
     class Key:

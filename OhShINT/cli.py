@@ -7,7 +7,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from typing_extensions import Annotated
 
 from . import get_all_providers
-from .models import IOC
+from .models_old import IOC
 
 logger.remove()
 
