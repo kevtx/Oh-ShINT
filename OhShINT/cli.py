@@ -2,17 +2,19 @@ import sys
 
 import typer
 from loguru import logger
-from rich import print
+from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 from typing_extensions import Annotated
 
-from . import get_all_providers
-from .models_old import IOC
+from .models.ioc import IOC
+from .providers import get_all_providers
 
 logger.remove()
 
-PROVIDERS = get_all_providers(load_keys=True)
+PROVIDERS = get_all_providers()
 
+console = Console()
 Oh = typer.Typer()
 
 
@@ -35,10 +37,11 @@ def start_gui(
 
 
 @Oh.command("search", help="Search OSINT providers for a single IOC")
-def ioc_one(
+def search_one(
     ioc_value: Annotated[str, typer.Argument(..., help="The IOC to search for")],
     logging: bool = typer.Option(False, "--logging", "-l", help="Enable logging"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    pretty: bool = typer.Option(False, "--pretty", "-p", help="Pretty print output"),
 ):
     if logging:
         if verbose:
@@ -48,23 +51,30 @@ def ioc_one(
         logger.configure(handlers=[{"sink": sys.stdout, "level": __level}])
         logger.debug("Logging enabled")
 
+    results = []
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         transient=True,
     ) as progress:
-        ioc = IOC.auto_type(ioc_value)
+        ioc = IOC(ioc_value)
 
-        description = f"Searching for [italic]{ioc.type}[/]: "
+        description = f"Searching for [italic]{ioc.__class__.__name__}[/]: "
         description += f"[bold red]{ioc.value}[/]"
         progress.add_task(description=description, total=None)
 
-        for provider in PROVIDERS.values():
-            try:
-                osint = provider.search(ioc)
-                print(f"{provider.NAME}: {osint.data['indicators']}")
-            except Exception as e:
-                print(f"{provider.NAME}: Error: {e}")
+        for name, provider in PROVIDERS.items():
+            results.append((name, ioc, ioc.typ))
+
+    if pretty:
+        table = Table("IOC", "Type", "Results")
+        for name, ioc, typ in results:
+            table.add_row(ioc.value, typ, "None")
+        console.print(table)
+    else:
+        for name, ioc, typ in results:
+            console.print(f"{ioc.value:<40}\t{typ:<10}\tNone")
 
 
 """
@@ -122,7 +132,7 @@ def ioc_one(
         else:
             format = "auto"
 
-        md = default_templates[ioc.type].print(**ioc.get_enriched(), format=format)
+        md = default_templates[ioc.type].console.print(**ioc.get_enriched(), format=format)
 
         if set_clipboard:
             try:
@@ -135,8 +145,8 @@ def ioc_one(
                 raise e
 
         if do_print:
-            print(Markdown(md))
-            print("")
+            console.print(Markdown(md))
+            console.print("")
         else:
             return md
 """
@@ -184,7 +194,7 @@ def ioc_list(
             raise e
 
     if do_print:
-        print(Markdown(all_comments))
+        console.print(Markdown(all_comments))
     else:
         return all_comments
 """
@@ -224,7 +234,7 @@ def ioc_file(
     if not file.exists():
         msg = f"File not found: {file.absolute()}"
 
-        print(msg)
+        console.print(msg)
         logger.error(msg)
         raise (FileNotFoundError(msg))
 
@@ -285,7 +295,7 @@ def ioc_file(
     #                raise e
 
     if do_print:
-        print(matches)
+        console.print(matches)
     else:
         return matches
 """

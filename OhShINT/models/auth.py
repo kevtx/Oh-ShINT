@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -17,7 +16,7 @@ class BaseAuth(httpx.Auth):
     """
 
     name: str
-    token: str
+    token: str = field(repr=False)
 
     def _apply(self, request: httpx.Request) -> None:
         """Implemented by subclasses."""
@@ -27,15 +26,20 @@ class BaseAuth(httpx.Auth):
         self._apply(request)
         yield request
 
+    def __repr__(self) -> str:
+        if self.token:
+            return f"{self.__class__.__name__}(name='{self.name}', token=****)"
+        return f"{self.__class__.__name__}(name='{self.name}')"
 
-@dataclass(slots=True)
+
+@dataclass(slots=True, repr=False)
 class HeaderAuth(BaseAuth):
     """
     Applies token as a header: {name}: {prefix}{token}
     Example: Authorization: Bearer <token>
     """
 
-    prefix: str = "Bearer "
+    prefix: str = field(default="Bearer ", repr=False)
 
     def _apply(self, request: httpx.Request) -> None:
         request.headers[self.name] = (
@@ -43,7 +47,7 @@ class HeaderAuth(BaseAuth):
         )
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, repr=False)
 class ParamAuth(BaseAuth):
     """
     Applies token as a query parameter: ?{name}={token}

@@ -2,16 +2,13 @@ from tkinter import Tk, ttk
 
 from loguru import logger
 
-from . import get_all_providers
+from .providers import get_all_providers
 
-WINDOW_TITLE = "OhShINT"
-PROVIDERS = get_all_providers(load_keys=True)
-
-# Class for result table of each IOC type
+WINDOW_TITLE = "Oh-ShINT"
+PROVIDERS = get_all_providers()
 
 
 class GUI(Tk):
-
     search_frame: ttk.Frame
     search_label: ttk.Label
     search_entry: ttk.Entry
@@ -60,14 +57,14 @@ class GUI(Tk):
         self.clear_results()
         for provider in PROVIDERS.values():
             try:
-                osint = provider.search(ioc)
+                provider.search(ioc)
                 self.result_table.insert(
                     "",
                     "end",
-                    values=(provider.NAME, osint.data["indicators"]),
+                    # values=(provider.human_name, osint.indicators),
                 )
             except Exception as e:
-                logger.error(f"{provider.NAME}: Error: {e}")
+                logger.error(f"{provider.human_name}: Error: {e}")
 
     def clear_results(self) -> None:
         for i in self.result_table.get_children():

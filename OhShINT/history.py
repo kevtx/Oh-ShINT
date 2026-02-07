@@ -12,9 +12,7 @@ from tinydb.table import Table as TinyTable
 from tinydb_serialization import SerializationMiddleware
 from tinydb_serialization.serializers import DateTimeSerializer
 
-from .functions import get_ioc_type
-
-#   from BetterJSONStorage import BetterJSONStorage # Disabled because it makes the JSON files unreadable
+from .models.ioc import IOC
 
 serialization = SerializationMiddleware(JSONStorage)
 serialization.register_serializer(DateTimeSerializer(), "TinyDate")
@@ -95,32 +93,32 @@ class Cache:
             raise e
 
     def get(
-        self, ioc_value: str, provider_name: Optional[str] = None
+        self, ioc: IOC | str, provider_name: Optional[str] = None
     ) -> list[TinyDocument]:
-        ioc_type, _ = get_ioc_type(ioc_value)
+        if isinstance(ioc, str):
+            ioc = IOC(ioc)
+
         db = self.__db
-        table = db.table(ioc_type.lower())
-        logger.debug(
-            f"Getting {ioc_type.upper()} {ioc_value} from {table.name.upper()} table"
-        )
+        table = db.table(ioc.__class__.__name__.lower())
+        logger.debug(f"Getting '{ioc}' from {ioc.__class__.__name__} table")
         try:
             record = Query()
 
             if not provider_name:
                 result = table.search(
-                    record.ioc.value.matches(ioc_value, flags=re.IGNORECASE)
+                    record.ioc.value.matches(ioc.value, flags=re.IGNORECASE)
                 )
             else:
                 result = table.search(
-                    record.ioc.value.matches(ioc_value, flags=re.IGNORECASE)
+                    record.ioc.value.matches(ioc.value, flags=re.IGNORECASE)
                     & record.provider_name.matches(provider_name, flags=re.IGNORECASE)
                 )
 
             for i in result:
-                logger.debug(f"Found {ioc_type} {ioc_value} - {i}")
+                logger.debug(f"Found {ioc.__class__.__name__} {ioc.value} - {i}")
             return result
         except Exception as e:
-            logger.error(f"Failed to get {ioc_type}: {ioc_value} - {e}")
+            logger.error(f"Failed to get {ioc.__class__.__name__}: {ioc.value} - {e}")
             raise e
 
     @staticmethod

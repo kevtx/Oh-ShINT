@@ -3,6 +3,54 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 import pycountry
 import regex as re
 from loguru import logger
+from pydantic.dataclasses import dataclass
+
+
+@dataclass
+class IOC:
+    value: str
+
+    def __new__(cls, value: str):
+        ioc_type, _ = get_ioc_type(value)
+        logger.debug(f"Creating IOC of type {ioc_type} with value {value}")
+        return super().__new__(globals()[ioc_type])
+
+    def __str__(self) -> str:
+        return self.value
+
+    @property
+    def typ(self) -> str:
+        return self.__class__.__name__
+
+
+@dataclass
+class IPv4(IOC):
+    pass
+
+
+@dataclass
+class IPv6(IOC):
+    pass
+
+
+@dataclass
+class Domain(IOC):
+    pass
+
+
+@dataclass
+class SHA1(IOC):
+    pass
+
+
+@dataclass
+class SHA256(IOC):
+    pass
+
+
+@dataclass
+class MD5(IOC):
+    pass
 
 
 def get_country_by_alpha2(alpha2: str):

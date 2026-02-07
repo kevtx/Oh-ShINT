@@ -1,9 +1,16 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any
-from .auth import HeaderAuth, ParamAuth
 from typing import Any, ClassVar
+
 import httpx
+from dotenv import dotenv_values
+from loguru import logger
+
+from ..cache import transport
+from ..history import Cache
+from .auth import HeaderAuth, ParamAuth
+from .ioc import IOC
 
 
 @dataclass(slots=True)
@@ -17,14 +24,32 @@ class BaseProvider:
       - auth_name defined here to avoid duplication
     """
 
-    api_base_url: ClassVar[str] = ""  # MUST be overridden by concrete providers
-    auth_name: ClassVar[str] = "api_key"  # Default; override per provider if needed
+    human_name: ClassVar[str] = ""
+    api_base_url: ClassVar[str] = ""
+    auth_token_name: ClassVar[str] = ""
 
-    token: str | None = None
-    timeout: float = 10.0
+    token: str | None = field(default=None, repr=False)
+    timeout: int = 30
 
     auth: httpx.Auth | None = field(default=None, init=False)
     _client: httpx.Client | None = field(default=None, init=False, repr=False)
+
+    def try_load_key(self):
+        if not self.token:
+            try:
+                logger.debug(f"Checking for {self.__class__.__name__} key in .env")
+                dotenv = {**dotenv_values(".env")}
+                if token := dotenv.get(self.__class__.__name__.upper()):
+                    logger.debug(f"Setting {self.__class__.__name__} key from .env")
+                    self.token = token
+                else:
+                    logger.warning(
+                        f"No key found for {self.__class__.__name__} provider in .env"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"Error loading {self.__class__.__name__} key from .env: {e}"
+                )
 
     def _ensure_base_url(self) -> None:
         if not self.api_base_url:
@@ -37,8 +62,9 @@ class BaseProvider:
             self._ensure_base_url()
             self._client = httpx.Client(
                 base_url=self.api_base_url,
-                auth=self.auth,  # optional
+                auth=self.auth,
                 timeout=self.timeout,
+                transport=transport,
             )
         return self._client
 
@@ -63,16 +89,27 @@ class BaseProvider:
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
 
+    def search(self, ioc: IOC | str, history: Cache = Cache(create=True)):
+        if isinstance(ioc, str):
+            ioc = IOC(ioc)
+
+        if history:
+            cached = history.get(ioc.value, self.__class__.__name__)
+            if cached is not None:
+                return cached
+
 
 @dataclass(slots=True)
-class HeaderAuthProviderBase(BaseProvider):
+class HeaderAuthProvider(BaseProvider):
     """
     Provider base for header auth.
     """
+
     auth_name: ClassVar[str] = "Authorization"
-    header_prefix: str = "Bearer "
+    header_prefix: str = field(default="Bearer ", repr=False)
 
     def __post_init__(self) -> None:
+        self.try_load_key()
         self.auth = (
             HeaderAuth(name=self.auth_name, token=self.token, prefix=self.header_prefix)
             if self.token
@@ -81,11 +118,15 @@ class HeaderAuthProviderBase(BaseProvider):
 
 
 @dataclass(slots=True)
-class ParamAuthProviderBase(BaseProvider):
+class ParamAuthProvider(BaseProvider):
     """
     Provider base for query parameter auth.
     """
+
     def __post_init__(self) -> None:
+        self.try_load_key()
         self.auth = (
-            ParamAuth(name=self.auth_name, token=self.token) if self.token else None
+            ParamAuth(name=self.auth_token_name, token=self.token)
+            if self.token
+            else None
         )
