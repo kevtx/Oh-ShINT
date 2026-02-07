@@ -1,6 +1,5 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
-
-from pydantic.dataclasses import dataclass
 
 from .ioc import IOC
 

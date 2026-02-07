@@ -1,13 +1,17 @@
+from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
 import pycountry
 import regex as re
 from loguru import logger
-from pydantic.dataclasses import dataclass
 
 
 @dataclass
 class IOC:
+    """
+    Base class for IOCs. Returns a subclass based on the type of value provided.
+    """
+
     value: str
 
     def __new__(cls, value: str):
@@ -58,6 +62,12 @@ def get_country_by_alpha2(alpha2: str):
 
 
 def is_ipv6(ip: str) -> bool:
+    """
+    :param ip: Description
+    :type ip: str
+    :return: Description
+    :rtype: bool
+    """
     try:
         return True if type(ip_address(ip)) == IPv6Address else False
     except ValueError:
@@ -65,6 +75,12 @@ def is_ipv6(ip: str) -> bool:
 
 
 def is_ipv4(ip: str) -> bool:
+    """
+    :param ip: Description
+    :type ip: str
+    :return: Description
+    :rtype: bool
+    """
     try:
         return True if type(ip_address(ip)) == IPv4Address else False
     except ValueError:
@@ -72,6 +88,12 @@ def is_ipv4(ip: str) -> bool:
 
 
 def is_public_ip(ip: str) -> bool:
+    """
+    :param ip: Description
+    :type ip: str
+    :return: Description
+    :rtype: bool
+    """
     try:
         return ip_address(ip).is_global
     except ValueError:
@@ -79,6 +101,12 @@ def is_public_ip(ip: str) -> bool:
 
 
 def is_domain(domain: str) -> bool:
+    """
+    :param domain: Description
+    :type domain: str
+    :return: Description
+    :rtype: bool
+    """
     if domain.count(".") >= 1 and len([i for i in domain if i.isalpha()]):
         return True
     else:
@@ -86,23 +114,45 @@ def is_domain(domain: str) -> bool:
 
 
 def is_md5(hash: str) -> bool:
+    """
+    :param hash: Description
+    :type hash: str
+    :return: Description
+    :rtype: bool
+    """
     return True if len(hash) == 32 else False
 
 
 def is_sha256(hash: str) -> bool:
+    """
+    :param hash: Description
+    :type hash: str
+    :return: Description
+    :rtype: bool
+    """
     return True if len(hash) == 64 else False
 
 
 def is_sha1(hash: str) -> bool:
+    """
+    :param hash: Description
+    :type hash: str
+    :return: Description
+    :rtype: bool
+    """
     return True if len(hash) == 40 else False
 
 
 def ioc_regex_search(regexp_name: str, search_content: str) -> list[str]:
     """
     Use Regex to search for IOCs in a given string
-    - regexp_name: Name of the regexp search to use
-    - search_content: String to search for IOCs in
 
+    :param regexp_name: Description
+    :type regexp_name: str
+    :param search_content: Description
+    :type search_content: str
+    :return: Description
+    :rtype: list[str]
     """
     # . No plurals!
     if regexp_name.endswith("s"):

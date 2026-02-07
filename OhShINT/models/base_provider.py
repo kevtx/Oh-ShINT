@@ -34,7 +34,10 @@ class BaseProvider:
     auth: httpx.Auth | None = field(default=None, init=False)
     _client: httpx.Client | None = field(default=None, init=False, repr=False)
 
-    def try_load_key(self):
+    def try_load_token(self):
+        """
+        Attempt to load token from .env using the class name as the key.
+        """
         if not self.token:
             try:
                 logger.debug(f"Checking for {self.__class__.__name__} key in .env")
@@ -109,7 +112,7 @@ class HeaderAuthProvider(BaseProvider):
     header_prefix: str = field(default="Bearer ", repr=False)
 
     def __post_init__(self) -> None:
-        self.try_load_key()
+        self.try_load_token()
         self.auth = (
             HeaderAuth(name=self.auth_name, token=self.token, prefix=self.header_prefix)
             if self.token
@@ -124,7 +127,7 @@ class ParamAuthProvider(BaseProvider):
     """
 
     def __post_init__(self) -> None:
-        self.try_load_key()
+        self.try_load_token()
         self.auth = (
             ParamAuth(name=self.auth_token_name, token=self.token)
             if self.token

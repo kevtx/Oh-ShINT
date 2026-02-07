@@ -1,10 +1,11 @@
 import json
 import re
+from dataclasses import asdict, is_dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
-from pydantic.json import pydantic_encoder
 from tinydb import Query, TinyDB
 from tinydb.storages import JSONStorage
 from tinydb.table import Document as TinyDocument
@@ -16,6 +17,18 @@ from .models.ioc import IOC
 
 serialization = SerializationMiddleware(JSONStorage)
 serialization.register_serializer(DateTimeSerializer(), "TinyDate")
+
+
+def dataclass_encoder(obj: Any) -> Any:
+    """
+    Custom JSON encoder for dataclasses.
+    Converts dataclasses to dictionaries for JSON serialization.
+    """
+    if is_dataclass(obj) and not isinstance(obj, type):
+        return asdict(obj)
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
 class Cache:
@@ -43,8 +56,9 @@ class Cache:
         if not self.path.parent.exists():
             if create:
                 logger.debug(f"Creating parent directory: {self.path.parent}")
-                self.path.parent.mkdir()
-            raise ValueError(f"self.path.parent does not exist: {self.path.parent}")
+                self.path.parent.mkdir(parents=True, exist_ok=True)
+            else:
+                raise ValueError(f"Parent directory does not exist: {self.path.parent}")
         elif not self.path.is_file():
             if not create:
                 raise ValueError(f"self.path must be a file`: {self.path}")
@@ -63,21 +77,18 @@ class Cache:
 
     def __prep_item(self, item: object) -> dict:
         logger.debug(f"Preparing item {item}")
-        i_json = json.loads(json.dumps(item, indent=4, default=pydantic_encoder))
+        i_json = json.loads(json.dumps(item, indent=4, default=dataclass_encoder))
         logger.debug(f"Item {item} prepared as {i_json}")
         try:
-            type = i_json["ioc"]["type"]
-        except AttributeError as e:
+            ioc_type = i_json["ioc"]["type"]
+        except (KeyError, TypeError) as e:
             logger.error(f"Item {item} does not have an IOC type")
             raise e
 
-        if type.lower() in ("ipv4", "ipv6"):
-            type = "ip"
-        elif type.lower() in ("md5", "sha1", "sha256", "url", "domain"):
-            pass
-        else:
-            logger.error(f"Invalid type '{type}'")
-            raise ValueError(f"Invalid type '{type}'")
+        allowed = {"ipv4", "ipv6", "md5", "sha1", "sha256", "url", "domain"}
+        if ioc_type.lower() not in allowed:
+            logger.error(f"Invalid type '{ioc_type}'")
+            raise ValueError(f"Invalid type '{ioc_type}'")
         return i_json
 
     def add(self, item: object) -> None:
