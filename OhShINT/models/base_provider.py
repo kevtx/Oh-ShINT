@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
@@ -10,9 +11,31 @@ from dotenv import dotenv_values
 from loguru import logger
 
 from ..cache import transport
-from ..history import Cache
+from ..history import History
 from .auth import HeaderAuth, ParamAuth
 from .ioc import IOC
+
+
+@dataclass(slots=True)
+class RequestConfig:
+    """
+    Configuration for an HTTP request to be made by a provider.
+
+    Attributes:
+        method: HTTP method (GET, POST, etc.)
+        path: API endpoint path (relative to base_url)
+        params: Query parameters
+        json: JSON body data
+        data: Form data
+        headers: Additional headers
+    """
+
+    method: str
+    path: str
+    params: dict[str, Any] | None = field(default=None)
+    json: dict[str, Any] | None = field(default=None)
+    data: dict[str, Any] | None = field(default=None)
+    headers: dict[str, str] | None = field(default=None)
 
 
 @dataclass(slots=True)
@@ -96,14 +119,59 @@ class BaseProvider:
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
 
-    def search(self, ioc: IOC | str, history: Cache = Cache(create=True)):
+    @abstractmethod
+    def build_request(self, ioc: IOC) -> RequestConfig:
+        """
+        Build a request configuration for the given IOC based on its type.
+
+        Each provider subclass must implement this to assemble the appropriate
+        request for the IOC types it supports.
+
+        Args:
+            ioc: The IOC to build a request for
+
+        Returns:
+            RequestConfig with method, path, and optional params/json/data/headers
+
+        Raises:
+            NotImplementedError: If the provider doesn't support this IOC type
+        """
+        raise NotImplementedError
+
+    def search(self, ioc: IOC | str, history: History = History(create=True)):
         if isinstance(ioc, str):
             ioc = IOC(ioc)
 
         if history:
-            cached = history.get(ioc.value, self.__class__.__name__)
-            if cached is not None:
-                return cached
+            stored = history.get(ioc.value, self.__class__.__name__)
+            if stored is not None:
+                return stored
+
+        request_config = self.build_request(ioc)
+        response = self.request(
+            request_config.method,
+            request_config.path,
+            params=request_config.params,
+            json=request_config.json,
+            data=request_config.data,
+            headers=request_config.headers,
+        )
+
+        try:
+            results = response.json()
+        except ValueError:
+            results = response.text
+
+        if history:
+            history.add(
+                {
+                    "ioc": {"type": ioc.typ, "value": ioc.value},
+                    "provider_name": self.__class__.__name__,
+                    "data": results,
+                }
+            )
+
+        return results
 
 
 @dataclass(slots=True)

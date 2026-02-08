@@ -35,9 +35,9 @@ def dataclass_encoder(obj: Any) -> Any:
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
-class Cache:
+class History:
     """
-    Class used to interact with cache databases.
+    Class used to interact with history databases.
 
     """
 
@@ -74,7 +74,7 @@ class Cache:
         # logger.debug(f"Database created at {self.path}")
 
     def __repr__(self) -> str:
-        return f"Cache({self.path.absolute()})"
+        return f"History({self.path.absolute()})"
 
     def __getitem__(self, table_name: str) -> TinyTable:
         return self.__db.table(table_name)

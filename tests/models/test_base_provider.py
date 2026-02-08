@@ -4,12 +4,13 @@ from unittest.mock import Mock, patch
 
 import httpx
 
-from OhShINT.history import Cache
+from OhShINT.history import History
 from OhShINT.models.auth import HeaderAuth, ParamAuth
 from OhShINT.models.base_provider import (
     BaseProvider,
     HeaderAuthProvider,
     ParamAuthProvider,
+    RequestConfig,
 )
 from OhShINT.models.ioc import IOC
 
@@ -20,6 +21,9 @@ class ConcreteProvider(BaseProvider):
     human_name = "Test Provider"
     api_base_url = "https://api.example.com"
     auth_token_name = "api_key"
+
+    def build_request(self, ioc: IOC) -> RequestConfig:
+        return RequestConfig(method="GET", path="/search", params={"q": ioc.value})
 
 
 class TestBaseProvider(unittest.TestCase):
@@ -192,48 +196,72 @@ class TestBaseProvider(unittest.TestCase):
 
     def test_search_with_ioc_string(self):
         """Test search method with IOC as string."""
-        # Create a provider and test search with string IOC
-        # search converts string to IOC and checks cache
-        # With default cache, it will return cached result if available
-        mock_cache = Mock(spec=Cache)
-        mock_cache.get.return_value = None
+        mock_history = Mock(spec=History)
+        mock_history.get.return_value = None
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.json.return_value = {"ok": True}
 
-        result = self.provider.search("192.168.1.1", history=mock_cache)
-        # Should convert to IOC object and check cache
-        self.assertIsNone(result)
+        with patch.object(
+            self.provider, "request", return_value=mock_response
+        ) as mock_request:
+            result = self.provider.search("192.168.1.1", history=mock_history)
+
+        mock_request.assert_called_once_with(
+            "GET",
+            "/search",
+            params={"q": "192.168.1.1"},
+            json=None,
+            data=None,
+            headers=None,
+        )
+        mock_history.add.assert_called_once()
+        self.assertEqual(result, {"ok": True})
 
     def test_search_with_ioc_object(self):
         """Test search method with IOC object."""
-        # Create a mock cache that returns None (cache miss)
-        mock_cache = Mock(spec=Cache)
-        mock_cache.get.return_value = None
-
+        mock_history = Mock(spec=History)
+        mock_history.get.return_value = None
         ioc = IOC("192.168.1.1")
-        result = self.provider.search(ioc, history=mock_cache)
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.json.return_value = {"ok": True}
 
-        # Should return None if not cached
-        self.assertIsNone(result)
+        with patch.object(
+            self.provider, "request", return_value=mock_response
+        ) as mock_request:
+            result = self.provider.search(ioc, history=mock_history)
 
-    def test_search_with_cache_hit(self):
-        """Test search method returns cached result."""
-        mock_cache = Mock(spec=Cache)
-        mock_cache.get.return_value = {"cached": "result"}
+        mock_request.assert_called_once()
+        mock_history.add.assert_called_once()
+        self.assertEqual(result, {"ok": True})
 
+    def test_search_with_history_hit(self):
+        """Test search method returns historyd result."""
+        mock_history = Mock(spec=History)
+        mock_history.get.return_value = {"historyd": "result"}
         ioc = IOC("192.168.1.1")
-        result = self.provider.search(ioc, history=mock_cache)
+        with patch.object(self.provider, "request") as mock_request:
+            result = self.provider.search(ioc, history=mock_history)
 
-        self.assertEqual(result, {"cached": "result"})
-        mock_cache.get.assert_called_once_with("192.168.1.1", "ConcreteProvider")
+        self.assertEqual(result, {"historyd": "result"})
+        mock_history.get.assert_called_once_with("192.168.1.1", "ConcreteProvider")
+        mock_request.assert_not_called()
 
-    def test_search_with_cache_miss(self):
-        """Test search method with cache miss."""
-        mock_cache = Mock(spec=Cache)
-        mock_cache.get.return_value = None
-
+    def test_search_with_history_miss(self):
+        """Test search method with history miss."""
+        mock_history = Mock(spec=History)
+        mock_history.get.return_value = None
         ioc = IOC("192.168.1.1")
-        result = self.provider.search(ioc, history=mock_cache)
+        mock_response = Mock(spec=httpx.Response)
+        mock_response.json.return_value = {"data": "value"}
 
-        self.assertIsNone(result)
+        with patch.object(
+            self.provider, "request", return_value=mock_response
+        ) as mock_request:
+            result = self.provider.search(ioc, history=mock_history)
+
+        mock_request.assert_called_once()
+        mock_history.add.assert_called_once()
+        self.assertEqual(result, {"data": "value"})
 
 
 class TestHeaderAuthProvider(unittest.TestCase):
