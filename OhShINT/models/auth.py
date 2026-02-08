@@ -7,13 +7,7 @@ import httpx
 
 @dataclass(slots=True)
 class BaseAuth(httpx.Auth):
-    """
-    Common base for token-style auth strategies.
-
-    Shared attributes:
-      - name: header name OR query param name (depends on strategy)
-      - token: credential value
-    """
+    """Common base for token-style auth strategies."""
 
     name: str
     token: str = field(repr=False)

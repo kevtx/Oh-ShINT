@@ -11,9 +11,7 @@ from loguru import logger
 
 @dataclass
 class IOC:
-    """
-    Base class for IOCs. Returns a subclass based on the type of value provided.
-    """
+    """Base class for IOCs. Returns a subclass based on the type of value provided."""
 
     value: str
 
