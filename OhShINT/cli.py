@@ -141,7 +141,9 @@ def ioc_one(
                 pyperclip.copy(md)
                 logger.success("Copied to clipboard")
             except Exception as e:
-                logger.error(f"Error: {e}")
+                exc_info = ExceptionInfo.from_current()
+                logger.error(f"Error copying to clipboard: {exc_info.exc_msg}")
+                logger.debug(exc_info.get_formatted())
                 raise e
 
         if do_print:
@@ -190,7 +192,9 @@ def ioc_list(
             pyperclip.copy(all_comments)
             logger.success("Copied to clipboard")
         except Exception as e:
-            logger.error(f"Error: {e}")
+            exc_info = ExceptionInfo.from_current()
+            logger.error(f"Error copying to clipboard: {exc_info.exc_msg}")
+            logger.debug(exc_info.get_formatted())
             raise e
 
     if do_print:
@@ -259,7 +263,9 @@ def ioc_file(
                     matches[i].append(m)
                     logger.trace("Added match to list")
             except Exception as e:
-                logger.error(f"Error: {e}")
+                exc_info = ExceptionInfo.from_current()
+                logger.error(f"Error searching for {i}: {exc_info.exc_msg}")
+                logger.debug(exc_info.get_formatted())
 
     #    if validate_matches:
     #        for ip in matches["ip"]:

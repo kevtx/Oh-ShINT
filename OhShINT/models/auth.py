@@ -42,9 +42,7 @@ class HeaderAuth(BaseAuth):
     prefix: str = field(default="Bearer ", repr=False)
 
     def _apply(self, request: httpx.Request) -> None:
-        request.headers[self.name] = (
-            f"{self.prefix}{self.token}" if self.prefix else self.token
-        )
+        request.headers[self.name] = f"{self.prefix or ''}{self.token}"
 
 
 @dataclass(slots=True, repr=False)

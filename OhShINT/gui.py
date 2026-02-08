@@ -1,5 +1,6 @@
 from tkinter import Tk, ttk
 
+from boltons.tbutils import ExceptionInfo
 from loguru import logger
 
 from .providers import get_all_providers
@@ -63,8 +64,10 @@ class GUI(Tk):
                     "end",
                     # values=(provider.human_name, osint.indicators),
                 )
-            except Exception as e:
-                logger.error(f"{provider.human_name}: Error: {e}")
+            except Exception:
+                exc_info = ExceptionInfo.from_current()
+                logger.error(f"{provider.human_name}: Error: {exc_info.exc_msg}")
+                logger.debug(exc_info.get_formatted())
 
     def clear_results(self) -> None:
         for i in self.result_table.get_children():

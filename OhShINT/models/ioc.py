@@ -3,6 +3,9 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 
 import pycountry
 import regex as re
+from boltons.cacheutils import cachedproperty
+from boltons.dictutils import FrozenDict
+from boltons.tbutils import ExceptionInfo
 from loguru import logger
 
 
@@ -22,7 +25,7 @@ class IOC:
     def __str__(self) -> str:
         return self.value
 
-    @property
+    @cachedproperty
     def typ(self) -> str:
         return self.__class__.__name__
 
@@ -69,7 +72,7 @@ def is_ipv6(ip: str) -> bool:
     :rtype: bool
     """
     try:
-        return True if type(ip_address(ip)) == IPv6Address else False
+        return type(ip_address(ip)) == IPv6Address
     except ValueError:
         return False
 
@@ -82,7 +85,7 @@ def is_ipv4(ip: str) -> bool:
     :rtype: bool
     """
     try:
-        return True if type(ip_address(ip)) == IPv4Address else False
+        return type(ip_address(ip)) == IPv4Address
     except ValueError:
         return False
 
@@ -120,7 +123,7 @@ def is_md5(hash: str) -> bool:
     :return: Description
     :rtype: bool
     """
-    return True if len(hash) == 32 else False
+    return len(hash) == 32
 
 
 def is_sha256(hash: str) -> bool:
@@ -130,7 +133,7 @@ def is_sha256(hash: str) -> bool:
     :return: Description
     :rtype: bool
     """
-    return True if len(hash) == 64 else False
+    return len(hash) == 64
 
 
 def is_sha1(hash: str) -> bool:
@@ -140,7 +143,7 @@ def is_sha1(hash: str) -> bool:
     :return: Description
     :rtype: bool
     """
-    return True if len(hash) == 40 else False
+    return len(hash) == 40
 
 
 def ioc_regex_search(regexp_name: str, search_content: str) -> list[str]:
@@ -158,13 +161,15 @@ def ioc_regex_search(regexp_name: str, search_content: str) -> list[str]:
     if regexp_name.endswith("s"):
         regexp_name = regexp_name[:-1]
 
-    regexp_strings = {
-        "ip": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
-        "domain": r"\b(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}\b",
-        "sha256": r"\b[a-fA-F0-9]{64}\b",
-        "sha1": r"\b([a-fA-F\d]{40})\b",
-        "md5": r"\b([a-fA-F\d]{32})\b",
-    }
+    regexp_strings = FrozenDict(
+        {
+            "ip": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+            "domain": r"\b(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}\b",
+            "sha256": r"\b[a-fA-F0-9]{64}\b",
+            "sha1": r"\b([a-fA-F\d]{40})\b",
+            "md5": r"\b([a-fA-F\d]{32})\b",
+        }
+    )
 
     if regexp_name not in regexp_strings.keys():
         logger.error("Invalid regexp name")
@@ -213,7 +218,9 @@ def get_ioc_type(ioc_value: str) -> tuple[str, str]:
             types.append(("Domain", "Domain"))
             logger.debug("Domain detected")
     except Exception as e:
-        logger.error(f"Error: {e}")
+        exc_info = ExceptionInfo.from_current()
+        logger.error(f"Error detecting IOC type: {exc_info.exc_msg}")
+        logger.debug(exc_info.get_formatted())
         raise e
 
     e = None

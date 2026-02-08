@@ -5,6 +5,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from boltons.fileutils import mkdir_p
+from boltons.iterutils import get_path
+from boltons.setutils import IndexedSet
+from boltons.tbutils import ExceptionInfo
 from loguru import logger
 from tinydb import Query, TinyDB
 from tinydb.storages import JSONStorage
@@ -56,7 +60,7 @@ class Cache:
         if not self.path.parent.exists():
             if create:
                 logger.debug(f"Creating parent directory: {self.path.parent}")
-                self.path.parent.mkdir(parents=True, exist_ok=True)
+                mkdir_p(str(self.path.parent))
             else:
                 raise ValueError(f"Parent directory does not exist: {self.path.parent}")
         elif not self.path.is_file():
@@ -80,12 +84,13 @@ class Cache:
         i_json = json.loads(json.dumps(item, indent=4, default=dataclass_encoder))
         logger.debug(f"Item {item} prepared as {i_json}")
         try:
-            ioc_type = i_json["ioc"]["type"]
+            ioc_type = get_path(i_json, ("ioc", "type"))
         except (KeyError, TypeError) as e:
-            logger.error(f"Item {item} does not have an IOC type")
+            exc_info = ExceptionInfo.from_current()
+            logger.error(f"Item {item} does not have an IOC type: {exc_info.exc_msg}")
             raise e
 
-        allowed = {"ipv4", "ipv6", "md5", "sha1", "sha256", "url", "domain"}
+        allowed = IndexedSet(["ipv4", "ipv6", "md5", "sha1", "sha256", "url", "domain"])
         if ioc_type.lower() not in allowed:
             logger.error(f"Invalid type '{ioc_type}'")
             raise ValueError(f"Invalid type '{ioc_type}'")
@@ -100,7 +105,9 @@ class Cache:
             table.insert(i_json)
             logger.debug(f"Item {item} stored in {table}")
         except Exception as e:
-            logger.error(f"Failed to store item: {item} - {e}")
+            exc_info = ExceptionInfo.from_current()
+            logger.error(f"Failed to store item: {item} - {exc_info.exc_msg}")
+            logger.debug(exc_info.get_formatted())
             raise e
 
     def get(
@@ -129,7 +136,11 @@ class Cache:
                 logger.debug(f"Found {ioc.__class__.__name__} {ioc.value} - {i}")
             return result
         except Exception as e:
-            logger.error(f"Failed to get {ioc.__class__.__name__}: {ioc.value} - {e}")
+            exc_info = ExceptionInfo.from_current()
+            logger.error(
+                f"Failed to get {ioc.__class__.__name__}: {ioc.value} - {exc_info.exc_msg}"
+            )
+            logger.debug(exc_info.get_formatted())
             raise e
 
     @staticmethod

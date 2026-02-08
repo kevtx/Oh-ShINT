@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 import httpx
+from boltons.dictutils import OMD
+from boltons.tbutils import ExceptionInfo
 from dotenv import dotenv_values
 from loguru import logger
 
@@ -41,7 +43,7 @@ class BaseProvider:
         if not self.token:
             try:
                 logger.debug(f"Checking for {self.__class__.__name__} key in .env")
-                dotenv = {**dotenv_values(".env")}
+                dotenv = OMD(dotenv_values(".env"))
                 if token := dotenv.get(self.__class__.__name__.upper()):
                     logger.debug(f"Setting {self.__class__.__name__} key from .env")
                     self.token = token
@@ -49,10 +51,12 @@ class BaseProvider:
                     logger.warning(
                         f"No key found for {self.__class__.__name__} provider in .env"
                     )
-            except Exception as e:
+            except Exception:
+                exc_info = ExceptionInfo.from_current()
                 logger.error(
-                    f"Error loading {self.__class__.__name__} key from .env: {e}"
+                    f"Error loading {self.__class__.__name__} key from .env: {exc_info.exc_msg}"
                 )
+                logger.debug(exc_info.get_formatted())
 
     def _ensure_base_url(self) -> None:
         if not self.api_base_url:
