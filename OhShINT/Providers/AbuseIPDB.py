@@ -26,4 +26,4 @@ class AbuseIPDB(ParamAuthProvider):
                 },
             )
 
-        raise NotImplementedError(f"{self.human_name} doesn't support {ioc.typ}")
+        raise NotImplementedError(f"{self.human_name} doesn't support {ioc.cn}")

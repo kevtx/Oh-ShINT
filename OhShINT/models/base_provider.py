@@ -197,7 +197,7 @@ class BaseProvider:
         if history:
             history.add(
                 {
-                    "ioc": {"type": ioc.typ, "value": ioc.value},
+                    "ioc": {"type": ioc.cn, "value": ioc.value},
                     "provider_name": self.__class__.__name__,
                     "data": results,
                 }
