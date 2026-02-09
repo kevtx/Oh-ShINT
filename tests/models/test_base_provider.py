@@ -22,7 +22,7 @@ class ConcreteProvider(BaseProvider):
     api_base_url = "https://api.example.com"
     auth_token_name = "api_key"
 
-    def build_request(self, ioc: IOC) -> RequestConfig:
+    def build_preauth_request_config(self, ioc: IOC) -> RequestConfig:
         return RequestConfig(method="GET", path="/search", params={"q": ioc.value})
 
 
@@ -284,9 +284,9 @@ class TestHeaderAuthProvider(unittest.TestCase):
         provider = self.TestHeaderProvider(token="test-token")
         self.assertIsInstance(provider.auth, HeaderAuth)
         if isinstance(provider.auth, HeaderAuth):
-            self.assertEqual(provider.auth.name, "Authorization")
+            self.assertEqual(provider.auth.name, "X-API-Key")
             self.assertEqual(provider.auth.token, "test-token")
-            self.assertEqual(provider.auth.prefix, "Bearer ")
+            self.assertEqual(provider.auth.prefix, "")
 
     def test_post_init_auth_none_without_token(self):
         """Test __post_init__ auth is None when no token."""
@@ -301,13 +301,13 @@ class TestHeaderAuthProvider(unittest.TestCase):
 
     def test_header_auth_applied_to_request(self):
         """Test that header auth is applied to requests."""
-        provider = self.TestHeaderProvider(token="my-token")
+        provider = self.TestHeaderProvider(token="test-token")
         client = provider._get_client()
 
         # The auth should be set on the client
         if isinstance(client.auth, HeaderAuth):
-            self.assertEqual(client.auth.name, "Authorization")
-            self.assertEqual(client.auth.token, "my-token")
+            self.assertEqual(client.auth.name, "X-API-Key")
+            self.assertEqual(client.auth.token, "test-token")
 
         provider.close()
 
@@ -351,13 +351,13 @@ class TestParamAuthProvider(unittest.TestCase):
 
     def test_param_auth_applied_to_request(self):
         """Test that param auth is applied to requests."""
-        provider = self.TestParamProvider(token="my-token")
+        provider = self.TestParamProvider(token="test-token")
         client = provider._get_client()
 
         # The auth should be set on the client
         if isinstance(client.auth, ParamAuth):
             self.assertEqual(client.auth.name, "api_key")
-            self.assertEqual(client.auth.token, "my-token")
+            self.assertEqual(client.auth.token, "test-token")
 
         provider.close()
 

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from typing import Optional
 
 import httpx
 
 
-@dataclass(slots=True)
 class BaseAuth(httpx.Auth):
     """Common base for token-style auth strategies."""
-
     name: str
-    token: str = field(repr=False)
+    token: str
+
+    def __init__(self, name: str, token: str) -> None:
+        self.name = name
+        self.token = token
 
     def _apply(self, request: httpx.Request) -> None:
         """Implemented by subclasses."""
@@ -26,20 +28,22 @@ class BaseAuth(httpx.Auth):
         return f"{self.__class__.__name__}(name='{self.name}')"
 
 
-@dataclass(slots=True, repr=False)
 class HeaderAuth(BaseAuth):
     """
-    Applies token as a header: {name}: {prefix}{token}
+    Applies token as a header: {name}: {prefix} {token}
     Example: Authorization: Bearer <token>
     """
+    prefix: str = ""
 
-    prefix: str = field(default="Bearer ", repr=False)
+    def __init__(self, name: str, token: str, prefix: Optional[str] = None) -> None:
+        super().__init__(name, token)
+        if prefix:
+            self.prefix = prefix
 
     def _apply(self, request: httpx.Request) -> None:
-        request.headers[self.name] = f"{self.prefix or ''}{self.token}"
+        request.headers[self.name] = f"{self.prefix or ''} {self.token}".strip()
 
 
-@dataclass(slots=True, repr=False)
 class ParamAuth(BaseAuth):
     """
     Applies token as a query parameter: ?{name}={token}

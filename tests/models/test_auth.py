@@ -43,10 +43,10 @@ class TestHeaderAuth(unittest.TestCase):
         auth = HeaderAuth(name="Authorization", token="abc123")
         request = httpx.Request("GET", "https://example.com")
         auth._apply(request)
-        self.assertEqual(request.headers["Authorization"], "Bearer abc123")
+        self.assertEqual(request.headers["Authorization"], "abc123")
 
     def test_header_auth_custom_prefix(self):
-        auth = HeaderAuth(name="Authorization", token="abc123", prefix="Token ")
+        auth = HeaderAuth(name="Authorization", token="abc123", prefix="Token")
         request = httpx.Request("GET", "https://example.com")
         auth._apply(request)
         self.assertEqual(request.headers["Authorization"], "Token abc123")
@@ -63,14 +63,14 @@ class TestHeaderAuth(unittest.TestCase):
             "GET", "https://example.com", headers={"Authorization": "old"}
         )
         auth._apply(request)
-        self.assertEqual(request.headers["Authorization"], "Bearer newtoken")
+        self.assertEqual(request.headers["Authorization"], "newtoken")
 
     def test_header_auth_flow(self):
         auth = HeaderAuth(name="Authorization", token="abc123")
         request = httpx.Request("GET", "https://example.com")
         flow = auth.auth_flow(request)
         first = next(flow)
-        self.assertEqual(first.headers["Authorization"], "Bearer abc123")
+        self.assertEqual(first.headers["Authorization"], "abc123")
         with self.assertRaises(StopIteration):
             next(flow)
 

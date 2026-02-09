@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Optional
 
 import httpx
-from boltons.dictutils import OMD
 from boltons.tbutils import ExceptionInfo
 from dotenv import dotenv_values
 from loguru import logger
@@ -47,8 +46,13 @@ class BaseProvider:
         if not self.token:
             try:
                 logger.debug(f"Checking for {self.__class__.__name__} key in .env")
-                dotenv = OMD(dotenv_values(".env"))
-                if token := dotenv.get(self.__class__.__name__.upper()):
+                
+
+                dotenv = {**dotenv_values(".env")}
+                token = dotenv.get(self.__class__.__name__)
+                if not token:
+                    token = dotenv.get(self.__class__.__name__.upper())
+                if token:
                     logger.debug(f"Setting {self.__class__.__name__} key from .env")
                     self.token = token
                 else:
@@ -146,7 +150,7 @@ class BaseProvider:
         self.close()
 
     @abstractmethod
-    def build_request(self, ioc: IOC) -> RequestConfig:
+    def build_preauth_request_config(self, ioc: IOC) -> RequestConfig:
         """
         Build a request configuration for the given IOC based on its type.
 
@@ -164,7 +168,7 @@ class BaseProvider:
         """
         raise NotImplementedError
 
-    def search(self, ioc: IOC | str, history: History = History(create=True)):
+    def search(self, ioc: IOC | str, history: Optional[History] = History(create=True), **kwargs):
         """Search for the given IOC using the provider, utilizing caching via History.
 
         Args:
@@ -175,11 +179,10 @@ class BaseProvider:
             ioc = IOC(ioc)
 
         if history:
-            stored = history.get(ioc.value, self.__class__.__name__)
-            if stored is not None:
+            if stored := history.get(ioc.value, self.__class__.__name__):
                 return stored
 
-        request_config = self.build_request(ioc)
+        request_config = self.build_preauth_request_config(ioc, **kwargs)
         response = self.request(
             request_config.method,
             request_config.path,
@@ -209,14 +212,12 @@ class BaseProvider:
 @dataclass(slots=True)
 class HeaderAuthProvider(BaseProvider):
     """Provider base for header auth."""
-
-    auth_name: ClassVar[str] = "Authorization"
-    header_prefix: str = field(default="Bearer ", repr=False)
+    header_prefix: str = ""
 
     def __post_init__(self) -> None:
         self.try_load_token()
         self.auth = (
-            HeaderAuth(name=self.auth_name, token=self.token, prefix=self.header_prefix)
+            HeaderAuth(name=self.auth_token_name, token=self.token, prefix=self.header_prefix)
             if self.token
             else None
         )
