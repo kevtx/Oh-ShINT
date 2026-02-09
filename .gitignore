@@ -1,4 +1,5 @@
 .cache
+.history.json
 
 __pycache__/
 *.py[codz]
