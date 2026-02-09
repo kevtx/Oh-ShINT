@@ -1,25 +1,43 @@
 import json
 import re
+from dataclasses import asdict, is_dataclass
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Optional
 
+from boltons.fileutils import mkdir_p
+from boltons.iterutils import get_path
+from boltons.setutils import IndexedSet
+from boltons.tbutils import ExceptionInfo
 from loguru import logger
-from pydantic.json import pydantic_encoder
 from tinydb import Query, TinyDB
 from tinydb.storages import JSONStorage
+from tinydb.table import Document as TinyDocument
+from tinydb.table import Table as TinyTable
 from tinydb_serialization import SerializationMiddleware
 from tinydb_serialization.serializers import DateTimeSerializer
 
-from .functions import get_ioc_type
-
-#   from BetterJSONStorage import BetterJSONStorage # Disabled because it makes the JSON files unreadable
+from .models.ioc import IOC
 
 serialization = SerializationMiddleware(JSONStorage)
 serialization.register_serializer(DateTimeSerializer(), "TinyDate")
 
 
-class Cache:
+def dataclass_encoder(obj: Any) -> Any:
     """
-    Class used to interact with cache databases.
+    Custom JSON encoder for dataclasses.
+    Converts dataclasses to dictionaries for JSON serialization.
+    """
+    if is_dataclass(obj) and not isinstance(obj, type):
+        return asdict(obj)
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+class History:
+    """
+    Class used to interact with history databases.
 
     """
 
@@ -42,46 +60,40 @@ class Cache:
         if not self.path.parent.exists():
             if create:
                 logger.debug(f"Creating parent directory: {self.path.parent}")
-                self.path.parent.mkdir()
+                mkdir_p(str(self.path.parent))
             else:
-                e = ValueError(f"self.path.parent does not exist: {self.path.parent}")
+                raise ValueError(f"Parent directory does not exist: {self.path.parent}")
         elif not self.path.is_file():
             if not create:
-                e = ValueError(f"self.path must be a file`: {self.path}")
+                raise ValueError(f"self.path must be a file`: {self.path}")
             else:
                 logger.debug(f"Creating database at {self.path}")
                 self.path.touch()
-
-        if "e" in locals():
-            logger.error(e)
-            raise e
 
         self.__db = TinyDB(self.path, indent=4, sort_keys=True, storage=serialization)
         # logger.debug(f"Database created at {self.path}")
 
     def __repr__(self) -> str:
-        return f"Cache({self.path.absolute()})"
+        return f"History({self.path.absolute()})"
 
-    def __getitem__(self, table_name: str) -> TinyDB:
-        return self.__db[table_name]
+    def __getitem__(self, table_name: str) -> TinyTable:
+        return self.__db.table(table_name)
 
     def __prep_item(self, item: object) -> dict:
         logger.debug(f"Preparing item {item}")
-        i_json = json.loads(json.dumps(item, indent=4, default=pydantic_encoder))
+        i_json = json.loads(json.dumps(item, indent=4, default=dataclass_encoder))
         logger.debug(f"Item {item} prepared as {i_json}")
         try:
-            type = i_json["ioc"]["type"]
-        except AttributeError as e:
-            logger.error(f"Item {item} does not have an IOC type")
+            ioc_type = get_path(i_json, ("ioc", "type"))
+        except (KeyError, TypeError) as e:
+            exc_info = ExceptionInfo.from_current()
+            logger.error(f"Item {item} does not have an IOC type: {exc_info.exc_msg}")
             raise e
 
-        if type.lower() in ("ipv4", "ipv6"):
-            type = "ip"
-        elif type.lower() in ("md5", "sha1", "sha256", "url", "domain"):
-            pass
-        else:
-            logger.error(f"Invalid type '{type}'")
-            raise ValueError(f"Invalid type '{type}'")
+        allowed = IndexedSet(["ipv4", "ipv6", "md5", "sha1", "sha256", "url", "domain"])
+        if ioc_type.lower() not in allowed:
+            logger.error(f"Invalid type '{ioc_type}'")
+            raise ValueError(f"Invalid type '{ioc_type}'")
         return i_json
 
     def add(self, item: object) -> None:
@@ -93,43 +105,46 @@ class Cache:
             table.insert(i_json)
             logger.debug(f"Item {item} stored in {table}")
         except Exception as e:
-            logger.error(f"Failed to store item: {item} - {e}")
+            exc_info = ExceptionInfo.from_current()
+            logger.error(f"Failed to store item: {item} - {exc_info.exc_msg}")
+            logger.debug(exc_info.get_formatted())
             raise e
 
-    def get(self, ioc_value: str, provider_name: str = None) -> list[dict[str, str]]:
-        ioc_type = get_ioc_type(ioc_value)
+    def get(
+        self, ioc: IOC | str, provider_name: Optional[str] = None
+    ) -> list[TinyDocument]:
+        if isinstance(ioc, str):
+            ioc = IOC(ioc)
+
         db = self.__db
-        table = db.table(ioc_type.lower())
-        logger.debug(
-            f"Getting {ioc_type.upper()} {ioc_value} from {table.name.upper()} table"
-        )
+        table = db.table(ioc.__class__.__name__.lower())
+        logger.debug(f"Getting '{ioc}' from {ioc.__class__.__name__} table")
         try:
             record = Query()
 
             if not provider_name:
                 result = table.search(
-                    record.ioc.value.matches(ioc_value, flags=re.IGNORECASE)
+                    record.ioc.value.matches(ioc.value, flags=re.IGNORECASE)
                 )
             else:
                 result = table.search(
-                    record.ioc.value.matches(ioc_value, flags=re.IGNORECASE)
+                    record.ioc.value.matches(ioc.value, flags=re.IGNORECASE)
                     & record.provider_name.matches(provider_name, flags=re.IGNORECASE)
                 )
 
-            if len(result) == 0:
-                logger.debug(f"No {ioc_type} {ioc_value} found")
-                return None
-            elif len(result) > 1:
-                logger.warning(f"Multiple {ioc_type} {ioc_value} found")
-                return result
-
-            logger.debug(f"Found {ioc_type} {ioc_value} - {result}")
+            for i in result:
+                logger.debug(f"Found {ioc.__class__.__name__} {ioc.value} - {i}")
             return result
         except Exception as e:
-            logger.error(f"Failed to get {ioc_type}: {ioc_value} - {e}")
+            exc_info = ExceptionInfo.from_current()
+            logger.error(
+                f"Failed to get {ioc.__class__.__name__}: {ioc.value} - {exc_info.exc_msg}"
+            )
+            logger.debug(exc_info.get_formatted())
             raise e
 
-    def create_table(self, db: str | TinyDB, table_name: str) -> None:
+    @staticmethod
+    def create_table(db: TinyDB, table_name: str) -> None:
         """
         Create a database table.
 
@@ -141,16 +156,14 @@ class Cache:
 
         :return:    None
         """
-        if isinstance(db, str):
-            db = self.__db[db]
+        # TODO: I don't really remember what this does
+        # if isinstance(db, str):
+        # db = self.__db[db]
 
-        if not hasattr(db, f"{table_name}_table"):
-            db.table(table_name)
-            logger.info(f"Table '{table_name}' created.")
-        else:
-            logger.warning(f"Table '{table_name}' already exists.")
+        db.table(table_name)
 
-    def get_table(self, db: str | TinyDB, table_name: str) -> Query:
+    @staticmethod
+    def get_table(db: TinyDB, table_name: str) -> TinyTable:
         """
         Get a table from a database.
 
@@ -162,17 +175,14 @@ class Cache:
 
         :return:    The table.
         """
-        if isinstance(db, str):
-            db = self.__db[db]
+        # TODO: Again, don't remember what this is for but it doesn't work like this
+        # if isinstance(db, str):
+        # db = self.__db[db]
 
-        if hasattr(db, f"{table_name}_table"):
-            return db.table(table_name)
-        else:
-            logger.warning(f"Table '{table_name}' does not exist.")
-            return None
+        return db.table(table_name)
 
     @staticmethod
-    def drop_table(self, db: str | TinyDB, table_name: str) -> None:
+    def drop_table(db: TinyDB, table_name: str) -> None:
         """
         Drop a table from a database.
 
@@ -184,16 +194,14 @@ class Cache:
 
         :return:    None
         """
-        if isinstance(db, str):
-            db = self.__db[db]
+        # TODO: Again, don't remember what this is for but it doesn't work like this
+        # if isinstance(db, str):
+        # db = self.__db[db]
 
-        if hasattr(db, f"{table_name}_table"):
-            db.drop_table(table_name)
-            logger.info(f"Table '{table_name}' dropped.")
-        else:
-            logger.warning(f"Table '{table_name}' does not exist.")
+        db.drop_table(table_name)
 
-    def drop_tables(self, db: str | TinyDB) -> None:
+    @staticmethod
+    def drop_tables(db: TinyDB) -> None:
         """
         Drop all tables from a database.
 
@@ -202,8 +210,8 @@ class Cache:
 
         :return:    None
         """
-        if isinstance(db, str):
-            db = self.__db[db]
+        # TODO: Again, don't remember what this is for but it doesn't work like this
+        # if isinstance(db, str):
+        # db = self.__db[db]
 
         db.drop_tables()
-        logger.info("All tables dropped.")

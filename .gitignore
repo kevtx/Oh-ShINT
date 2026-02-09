@@ -1,11 +1,22 @@
-**
-!OhShINT/
-
+.cache
 .history.json
-.httpx_cache
 
-!environment.yml
-!example.env
-!justfile
-!oh-shint.py
-!README.md
+__pycache__/
+*.py[codz]
+*$py.class
+
+.env
+.envrc
+.venv
+.venv-*
+
+# .vscode/
+
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+*.lnk
