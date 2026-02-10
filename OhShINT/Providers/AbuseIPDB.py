@@ -28,4 +28,6 @@ class AbuseIPDB(HeaderAuthProvider):
                 headers={"Accept": "application/json"},
             )
 
-        raise NotImplementedError(f"{self.human_name} doesn't support {ioc.cn} indicators")
+        raise NotImplementedError(
+            f"{self.human_name} doesn't support {ioc.cn} indicators"
+        )

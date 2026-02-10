@@ -7,6 +7,7 @@ import httpx
 
 class BaseAuth(httpx.Auth):
     """Common base for token-style auth strategies."""
+
     name: str
     token: str
 
@@ -33,6 +34,7 @@ class HeaderAuth(BaseAuth):
     Applies token as a header: {name}: {prefix} {token}
     Example: Authorization: Bearer <token>
     """
+
     prefix: str = ""
 
     def __init__(self, name: str, token: str, prefix: Optional[str] = None) -> None:

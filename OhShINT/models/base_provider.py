@@ -37,7 +37,7 @@ class BaseProvider:
 
     token: str | None = field(default=None, repr=False)
     timeout: int = 30
-
+    proxy: str | None = field(default=None)
     auth: httpx.Auth | None = field(default=None, init=False)
     _client: httpx.Client | None = field(default=None, init=False, repr=False)
 
@@ -46,7 +46,6 @@ class BaseProvider:
         if not self.token:
             try:
                 logger.debug(f"Checking for {self.__class__.__name__} key in .env")
-                
 
                 dotenv = {**dotenv_values(".env")}
                 token = dotenv.get(self.__class__.__name__)
@@ -63,6 +62,32 @@ class BaseProvider:
                 exc_info = ExceptionInfo.from_current()
                 logger.error(
                     f"Error loading {self.__class__.__name__} key from .env: {exc_info.exc_msg}"
+                )
+                logger.debug(exc_info.get_formatted())
+
+    def try_load_proxy(self):
+        """Attempt to load proxy from .env. Checks for HTTP_PROXY, HTTPS_PROXY, and PROXY environment variables."""
+        if not self.proxy:
+            try:
+                logger.debug("Checking for proxy configuration in .env")
+                dotenv = {**dotenv_values(".env")}
+
+                # Check for proxy in order of preference
+                proxy = (
+                    dotenv.get("HTTPS_PROXY")
+                    or dotenv.get("HTTP_PROXY")
+                    or dotenv.get("PROXY")
+                )
+
+                if proxy:
+                    logger.debug(f"Setting proxy from .env")
+                    self.proxy = proxy
+                else:
+                    logger.debug("No proxy configuration found in .env")
+            except Exception:
+                exc_info = ExceptionInfo.from_current()
+                logger.error(
+                    f"Error loading proxy configuration from .env: {exc_info.exc_msg}"
                 )
                 logger.debug(exc_info.get_formatted())
 
@@ -90,6 +115,7 @@ class BaseProvider:
                 auth=self.auth,
                 timeout=self.timeout,
                 transport=transport,
+                proxy=self.proxy,
             )
         return self._client
 
@@ -168,7 +194,12 @@ class BaseProvider:
         """
         raise NotImplementedError
 
-    def search(self, ioc: IOC | str, history: Optional[History] = History(create=True), **kwargs):
+    def search(
+        self,
+        ioc: IOC | str,
+        history: Optional[History] = History(create=True),
+        **kwargs,
+    ):
         """Search for the given IOC using the provider, utilizing caching via History.
 
         Args:
@@ -212,12 +243,16 @@ class BaseProvider:
 @dataclass(slots=True)
 class HeaderAuthProvider(BaseProvider):
     """Provider base for header auth."""
+
     header_prefix: str = ""
 
     def __post_init__(self) -> None:
         self.try_load_token()
+        self.try_load_proxy()
         self.auth = (
-            HeaderAuth(name=self.auth_token_name, token=self.token, prefix=self.header_prefix)
+            HeaderAuth(
+                name=self.auth_token_name, token=self.token, prefix=self.header_prefix
+            )
             if self.token
             else None
         )
@@ -229,6 +264,7 @@ class ParamAuthProvider(BaseProvider):
 
     def __post_init__(self) -> None:
         self.try_load_token()
+        self.try_load_proxy()
         self.auth = (
             ParamAuth(name=self.auth_token_name, token=self.token)
             if self.token

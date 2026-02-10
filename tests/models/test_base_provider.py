@@ -419,5 +419,219 @@ class TestProviderIntegration(unittest.TestCase):
         p2.close()
 
 
+class TestProxySupport(unittest.TestCase):
+    """Test proxy support functionality."""
+
+    def setUp(self):
+        self.provider = ConcreteProvider(token="test-token-123")
+
+    def tearDown(self):
+        if self.provider._client is not None:
+            self.provider.close()
+
+    def test_initialization_with_proxy(self):
+        """Test provider initializes with proxy."""
+        provider = ConcreteProvider(
+            token="token", proxy="http://proxy.example.com:8080"
+        )
+        self.assertEqual(provider.proxy, "http://proxy.example.com:8080")
+
+    def test_initialization_without_proxy(self):
+        """Test provider initializes without proxy (None)."""
+        provider = ConcreteProvider(token="token")
+        self.assertIsNone(provider.proxy)
+
+    def test_proxy_with_authentication(self):
+        """Test proxy initialization with authentication credentials."""
+        proxy_url = "http://user:pass@proxy.example.com:8080"
+        provider = ConcreteProvider(token="token", proxy=proxy_url)
+        self.assertEqual(provider.proxy, proxy_url)
+
+    def test_try_load_proxy_from_https_proxy_env(self):
+        """Test loading proxy from HTTPS_PROXY environment variable."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {"HTTPS_PROXY": "http://proxy-https:8080"}
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://proxy-https:8080")
+
+    def test_try_load_proxy_from_http_proxy_env(self):
+        """Test loading proxy from HTTP_PROXY environment variable as fallback."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {"HTTP_PROXY": "http://proxy-http:8080"}
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://proxy-http:8080")
+
+    def test_try_load_proxy_from_proxy_env(self):
+        """Test loading proxy from PROXY environment variable as fallback."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {"PROXY": "http://proxy-generic:8080"}
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://proxy-generic:8080")
+
+    def test_try_load_proxy_prefers_https_proxy(self):
+        """Test that HTTPS_PROXY is preferred over other proxy settings."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {
+                "HTTPS_PROXY": "http://proxy-https:8080",
+                "HTTP_PROXY": "http://proxy-http:8080",
+                "PROXY": "http://proxy-generic:8080",
+            }
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://proxy-https:8080")
+
+    def test_try_load_proxy_fallback_to_http_proxy(self):
+        """Test fallback to HTTP_PROXY when HTTPS_PROXY not set."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {
+                "HTTP_PROXY": "http://proxy-http:8080",
+                "PROXY": "http://proxy-generic:8080",
+            }
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://proxy-http:8080")
+
+    def test_try_load_proxy_fallback_to_generic_proxy(self):
+        """Test fallback to PROXY when HTTPS_PROXY and HTTP_PROXY not set."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {"PROXY": "http://proxy-generic:8080"}
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://proxy-generic:8080")
+
+    def test_try_load_proxy_no_env_vars(self):
+        """Test no proxy is loaded when no proxy env vars are set."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {}
+            provider.try_load_proxy()
+            self.assertIsNone(provider.proxy)
+
+    def test_try_load_proxy_does_not_override_existing_proxy(self):
+        """Test that try_load_proxy does not override an existing proxy."""
+        provider = ConcreteProvider(proxy="http://explicit-proxy:8080")
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {"HTTPS_PROXY": "http://env-proxy:8080"}
+            provider.try_load_proxy()
+            self.assertEqual(provider.proxy, "http://explicit-proxy:8080")
+
+    def test_try_load_proxy_error_handling(self):
+        """Test error handling when loading proxy from .env fails."""
+        provider = ConcreteProvider()
+
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.side_effect = Exception("File read error")
+            # Should not raise, just log error
+            provider.try_load_proxy()
+            self.assertIsNone(provider.proxy)
+
+    def test_get_client_passes_proxy_to_httpx_client(self):
+        """Test that proxy is passed to httpx.Client initialization."""
+        provider = ConcreteProvider(
+            token="token", proxy="http://proxy.example.com:8080"
+        )
+
+        with patch("OhShINT.models.base_provider.httpx.Client") as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            provider._get_client()
+
+            # Verify httpx.Client was called with proxy parameter
+            mock_client_class.assert_called_once()
+            call_kwargs = mock_client_class.call_args[1]
+            self.assertEqual(call_kwargs["proxy"], "http://proxy.example.com:8080")
+
+    def test_get_client_with_none_proxy(self):
+        """Test that None proxy is passed to httpx.Client."""
+        provider = ConcreteProvider(token="token", proxy=None)
+
+        with patch("OhShINT.models.base_provider.httpx.Client") as mock_client_class:
+            mock_client_instance = Mock()
+            mock_client_class.return_value = mock_client_instance
+
+            provider._get_client()
+
+            call_kwargs = mock_client_class.call_args[1]
+            self.assertIsNone(call_kwargs["proxy"])
+
+    def test_header_auth_provider_loads_proxy(self):
+        """Test HeaderAuthProvider calls try_load_proxy in __post_init__."""
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {
+                "HTTPS_PROXY": "http://proxy-header:8080",
+                "HeaderAuthProvider": "token",
+            }
+
+            @dataclass(slots=True)
+            class TestHeaderAuthProvider(HeaderAuthProvider):
+                api_base_url = "https://api.example.com"
+                auth_token_name = "key"
+
+            provider = TestHeaderAuthProvider()
+            # Proxy should be loaded
+            self.assertEqual(provider.proxy, "http://proxy-header:8080")
+
+    def test_param_auth_provider_loads_proxy(self):
+        """Test ParamAuthProvider calls try_load_proxy in __post_init__."""
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {
+                "HTTPS_PROXY": "http://proxy-param:8080",
+                "TestParamAuthProvider": "token",
+            }
+
+            @dataclass(slots=True)
+            class TestParamAuthProvider(ParamAuthProvider):
+                api_base_url = "https://api.example.com"
+                auth_token_name = "key"
+
+            provider = TestParamAuthProvider()
+            # Proxy should be loaded
+            self.assertEqual(provider.proxy, "http://proxy-param:8080")
+
+    def test_proxy_persists_across_requests(self):
+        """Test that proxy setting persists across multiple requests."""
+        provider = ConcreteProvider(
+            token="token", proxy="http://proxy.example.com:8080"
+        )
+
+        # First request
+        with patch.object(provider, "_get_client") as mock_get_client:
+            mock_client = Mock(spec=httpx.Client)
+            mock_response = Mock(spec=httpx.Response)
+            mock_client.request.return_value = mock_response
+            mock_get_client.return_value = mock_client
+
+            provider.request("GET", "/path1")
+
+            # Second request
+            provider.request("GET", "/path2")
+
+            # Proxy should still be set
+            self.assertEqual(provider.proxy, "http://proxy.example.com:8080")
+
+    def test_proxy_with_different_providers(self):
+        """Test that each provider can have different proxy settings."""
+        provider1 = ConcreteProvider(token="token1", proxy="http://proxy1:8080")
+        provider2 = ConcreteProvider(token="token2", proxy="http://proxy2:8080")
+
+        self.assertEqual(provider1.proxy, "http://proxy1:8080")
+        self.assertEqual(provider2.proxy, "http://proxy2:8080")
+
+        provider1.close()
+        provider2.close()
+
+
 if __name__ == "__main__":
     unittest.main()

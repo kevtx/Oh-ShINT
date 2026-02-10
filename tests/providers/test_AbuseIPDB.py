@@ -89,3 +89,37 @@ class TestAbuseIPDB(unittest.TestCase):
         )
         self.assertEqual(req.headers.get("Accept"), "application/json")
         self.assertEqual(req.headers.get("key"), "test-token")
+
+    def test_abuseipdb_with_proxy(self):
+        """Test AbuseIPDB provider with proxy configuration."""
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {"AbuseIPDB": "test-token"}
+            provider = AbuseIPDB(proxy="http://proxy.example.com:8080")
+            self.assertEqual(provider.proxy, "http://proxy.example.com:8080")
+            provider.close()
+
+    def test_abuseipdb_loads_proxy_from_env(self):
+        """Test AbuseIPDB provider loads proxy from environment variables."""
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {
+                "AbuseIPDB": "test-token",
+                "HTTPS_PROXY": "http://env-proxy:8080",
+            }
+            provider = AbuseIPDB()
+            self.assertEqual(provider.proxy, "http://env-proxy:8080")
+            provider.close()
+
+    def test_abuseipdb_proxy_priority_over_env(self):
+        """Test that explicit proxy takes priority over environment variables."""
+        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
+            mock_dotenv.return_value = {
+                "AbuseIPDB": "test-token",
+                "HTTPS_PROXY": "http://env-proxy:8080",
+            }
+            provider = AbuseIPDB(proxy="http://explicit-proxy:9090")
+            self.assertEqual(provider.proxy, "http://explicit-proxy:9090")
+            provider.close()
+
+
+if __name__ == "__main__":
+    unittest.main()
