@@ -9,7 +9,7 @@ from boltons.tbutils import ExceptionInfo
 from dotenv import dotenv_values
 from loguru import logger
 
-from ..cache import transport
+from ..cache import get_cache_transport
 from ..history import History
 from .auth import HeaderAuth, ParamAuth
 from .ioc import IOC
@@ -117,7 +117,7 @@ class BaseProvider:
                 base_url=self.api_base_url,
                 auth=self.auth,
                 timeout=self.timeout,
-                transport=transport,
+                transport=get_cache_transport(proxy=self.proxy),
                 proxy=self.proxy,
             )
         return self._client

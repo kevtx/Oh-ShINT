@@ -75,7 +75,7 @@ class TestAbuseIPDB(unittest.TestCase):
         # Close any existing client so it gets recreated with the mocked transport
         self.provider.close()
 
-        with patch("OhShINT.models.base_provider.transport", mock_transport):
+        with patch("OhShINT.models.base_provider.get_cache_transport", return_value=mock_transport):
             result = self.provider.search("8.8.8.8", history=mock_history)
 
         self.assertEqual(result, {"ok": True})
