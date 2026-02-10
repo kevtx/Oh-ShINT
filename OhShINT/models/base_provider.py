@@ -20,11 +20,14 @@ class RequestConfig:
     """Configuration for an HTTP request to be made by a provider."""
 
     method: str
-    path: str
-    params: dict[str, Any] | None = field(default=None)
-    json: dict[str, Any] | None = field(default=None)
-    data: dict[str, Any] | None = field(default=None)
-    headers: dict[str, str] | None = field(default=None)
+    path: Optional[str] = None
+    params: Optional[dict[str, Any]] = field(default=None)
+    json: Optional[dict[str, Any]] = field(default=None)
+    data: Optional[dict[str, Any]] = field(default=None)
+    headers: Optional[dict[str, str]] = field(default=None)
+
+    def __post_init__(self) -> None:
+        self.method = self.method.upper()
 
 
 @dataclass(slots=True)
@@ -216,7 +219,7 @@ class BaseProvider:
         request_config = self.build_preauth_request_config(ioc, **kwargs)
         response = self.request(
             request_config.method,
-            request_config.path,
+            request_config.path if request_config.path else "",
             params=request_config.params,
             json=request_config.json,
             data=request_config.data,

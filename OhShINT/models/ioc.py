@@ -1,8 +1,6 @@
 import string
 from dataclasses import __all__, dataclass
-from ipaddress import IPv4Address, IPv6Address
-from ipaddress import ip_address as v_ip
-from ipaddress import ip_network as v_cidr
+from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 
 import pycountry
 import regex as re
@@ -33,11 +31,11 @@ def _try_validate(value, *validators) -> bool:
 
 _all_hex_chars = lambda x: bool(x) and all(ch in string.hexdigits for ch in x)
 
-is_ipv6 = lambda x: _try_validate(x, lambda v: type(v_ip(v)) == IPv6Address)
-is_ipv4 = lambda x: _try_validate(x, lambda v: type(v_ip(v)) == IPv4Address)
-is_public_ip = lambda x: _try_validate(x, lambda v: v_ip(v).is_global)
+is_ipv6 = lambda x: _try_validate(x, lambda v: type(ip_address(v)) == IPv6Address)
+is_ipv4 = lambda x: _try_validate(x, lambda v: type(ip_address(v)) == IPv4Address)
+is_public_ip = lambda x: _try_validate(x, lambda v: ip_address(v).is_global)
 is_cidr = lambda x: _try_validate(
-    x, lambda v: type(v_cidr(v, strict=False)) in (IPv4Address, IPv6Address), x
+    x, lambda v: type(ip_network(v, strict=False)) in (IPv4Address, IPv6Address)
 )
 is_domain = lambda x: _try_validate(x, v_domain)
 is_md5 = lambda x: _try_validate(x, lambda v: len(v) == 32 and _all_hex_chars(v))

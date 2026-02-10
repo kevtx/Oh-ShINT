@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from OhShINT.models.ioc import IOC, IPv4, IPv6
+from OhShINT.models.ioc import CIDR, IOC, IPv4, IPv6
 
 from ..models.base_provider import HeaderAuthProvider, RequestConfig
 
@@ -17,16 +17,22 @@ class AbuseIPDB(HeaderAuthProvider):
     header_prefix = ""
 
     def build_preauth_request_config(self, ioc: IOC, **kwargs) -> RequestConfig:
+        params = {"maxAgeInDays": kwargs.get("max_age_days", DEFAULT_MAX_AGE_DAYS)}
+        rc = RequestConfig(
+            method="GET",
+            params=params,
+            headers={"Accept": "application/json"},
+        )
         if isinstance(ioc, (IPv4, IPv6)):
-            return RequestConfig(
-                method="GET",
-                path="check",
-                params={
-                    "ipAddress": str(ioc),
-                    "maxAgeInDays": kwargs.get("max_age_days", DEFAULT_MAX_AGE_DAYS),
-                },
-                headers={"Accept": "application/json"},
-            )
+            rc.path = "check"
+            params["ipAddress"] = ioc.value
+            rc.params = params
+            return rc
+        elif isinstance(ioc, CIDR):
+            rc.path = "check-block"
+            params["network"] = ioc.value
+            rc.params = params
+            return rc
 
         raise NotImplementedError(
             f"{self.human_name} doesn't support {ioc.cn} indicators"
