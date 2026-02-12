@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Optional
 
+import certifi
 import httpx
 from boltons.tbutils import ExceptionInfo
-from dotenv import dotenv_values
 from loguru import logger
 
 from ..cache import get_cache_transport
@@ -40,7 +41,7 @@ class BaseProvider:
 
     token: str | None = field(default=None, repr=False)
     timeout: int = 30
-    proxy: str | None = field(default=None)
+
     auth: httpx.Auth | None = field(default=None, init=False)
     _client: httpx.Client | None = field(default=None, init=False, repr=False)
 
@@ -50,10 +51,9 @@ class BaseProvider:
             try:
                 logger.debug(f"Checking for {self.__class__.__name__} key in .env")
 
-                dotenv = {**dotenv_values(".env")}
-                token = dotenv.get(self.__class__.__name__)
+                token = os.getenv(f"{self.__class__.__name__.upper()}_API_KEY")
                 if not token:
-                    token = dotenv.get(self.__class__.__name__.upper())
+                    token = os.getenv(self.__class__.__name__.upper())
                 if token:
                     logger.debug(f"Setting {self.__class__.__name__} key from .env")
                     self.token = token
@@ -65,32 +65,6 @@ class BaseProvider:
                 exc_info = ExceptionInfo.from_current()
                 logger.error(
                     f"Error loading {self.__class__.__name__} key from .env: {exc_info.exc_msg}"
-                )
-                logger.debug(exc_info.get_formatted())
-
-    def try_load_proxy(self):
-        """Attempt to load proxy from .env. Checks for HTTP_PROXY, HTTPS_PROXY, and PROXY environment variables."""
-        if not self.proxy:
-            try:
-                logger.debug("Checking for proxy configuration in .env")
-                dotenv = {**dotenv_values(".env")}
-
-                # Check for proxy in order of preference
-                proxy = (
-                    dotenv.get("HTTPS_PROXY")
-                    or dotenv.get("HTTP_PROXY")
-                    or dotenv.get("PROXY")
-                )
-
-                if proxy:
-                    logger.debug(f"Setting proxy from .env")
-                    self.proxy = proxy
-                else:
-                    logger.debug("No proxy configuration found in .env")
-            except Exception:
-                exc_info = ExceptionInfo.from_current()
-                logger.error(
-                    f"Error loading proxy configuration from .env: {exc_info.exc_msg}"
                 )
                 logger.debug(exc_info.get_formatted())
 
@@ -113,12 +87,17 @@ class BaseProvider:
         """
         if self._client is None:
             self._ensure_base_url()
+            
+            # Extract proxy from environment variables following standard conventions
+            proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy") or \
+                    os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+            
             self._client = httpx.Client(
                 base_url=self.api_base_url,
                 auth=self.auth,
                 timeout=self.timeout,
-                transport=get_cache_transport(proxy=self.proxy),
-                proxy=self.proxy,
+                transport=get_cache_transport(proxy=proxy),
+                verify=certifi.where(),
             )
         return self._client
 
@@ -250,11 +229,16 @@ class HeaderAuthProvider(BaseProvider):
     header_prefix: str = ""
 
     def __post_init__(self) -> None:
-        self.try_load_token()
-        self.try_load_proxy()
+        if not self.token:
+            token_key = f"{self.__class__.__name__.upper()}_API_KEY"
+            self.token = os.getenv(token_key)
+            if not self.token:
+                self.token = os.getenv(self.__class__.__name__.upper())
         self.auth = (
             HeaderAuth(
-                name=self.auth_token_name, token=self.token, prefix=self.header_prefix
+                name=self.auth_token_name,
+                token=self.token,
+                prefix=self.header_prefix,
             )
             if self.token
             else None
@@ -266,8 +250,11 @@ class ParamAuthProvider(BaseProvider):
     """Provider base for query parameter auth."""
 
     def __post_init__(self) -> None:
-        self.try_load_token()
-        self.try_load_proxy()
+        if not self.token:
+            token_key = f"{self.__class__.__name__.upper()}_API_KEY"
+            self.token = os.getenv(token_key)
+            if not self.token:
+                self.token = os.getenv(self.__class__.__name__.upper())
         self.auth = (
             ParamAuth(name=self.auth_token_name, token=self.token)
             if self.token

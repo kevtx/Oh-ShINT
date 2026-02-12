@@ -10,12 +10,12 @@ from OhShINT.providers.AbuseIPDB import DEFAULT_MAX_AGE_DAYS, AbuseIPDB
 
 class TestAbuseIPDB(unittest.TestCase):
     def setUp(self) -> None:
-        dotenv_mock = {
-            "AbuseIPDB": "test-token",
-        }
-        patcher = patch(
-            "OhShINT.models.base_provider.dotenv_values", return_value=dotenv_mock
-        )
+        def mock_getenv_impl(key, default=None):
+            if "ABUSEIPDB" in key:
+                return "test-token"
+            return default
+
+        patcher = patch("os.getenv", side_effect=mock_getenv_impl)
         self.addCleanup(patcher.stop)
         patcher.start()
         self.provider = AbuseIPDB()
@@ -75,7 +75,10 @@ class TestAbuseIPDB(unittest.TestCase):
         # Close any existing client so it gets recreated with the mocked transport
         self.provider.close()
 
-        with patch("OhShINT.models.base_provider.get_cache_transport", return_value=mock_transport):
+        with patch(
+            "OhShINT.models.base_provider.get_cache_transport",
+            return_value=mock_transport,
+        ):
             result = self.provider.search("8.8.8.8", history=mock_history)
 
         self.assertEqual(result, {"ok": True})
@@ -89,36 +92,6 @@ class TestAbuseIPDB(unittest.TestCase):
         )
         self.assertEqual(req.headers.get("Accept"), "application/json")
         self.assertEqual(req.headers.get("key"), "test-token")
-
-    def test_abuseipdb_with_proxy(self):
-        """Test AbuseIPDB provider with proxy configuration."""
-        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
-            mock_dotenv.return_value = {"AbuseIPDB": "test-token"}
-            provider = AbuseIPDB(proxy="http://proxy.example.com:8080")
-            self.assertEqual(provider.proxy, "http://proxy.example.com:8080")
-            provider.close()
-
-    def test_abuseipdb_loads_proxy_from_env(self):
-        """Test AbuseIPDB provider loads proxy from environment variables."""
-        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
-            mock_dotenv.return_value = {
-                "AbuseIPDB": "test-token",
-                "HTTPS_PROXY": "http://env-proxy:8080",
-            }
-            provider = AbuseIPDB()
-            self.assertEqual(provider.proxy, "http://env-proxy:8080")
-            provider.close()
-
-    def test_abuseipdb_proxy_priority_over_env(self):
-        """Test that explicit proxy takes priority over environment variables."""
-        with patch("OhShINT.models.base_provider.dotenv_values") as mock_dotenv:
-            mock_dotenv.return_value = {
-                "AbuseIPDB": "test-token",
-                "HTTPS_PROXY": "http://env-proxy:8080",
-            }
-            provider = AbuseIPDB(proxy="http://explicit-proxy:9090")
-            self.assertEqual(provider.proxy, "http://explicit-proxy:9090")
-            provider.close()
 
 
 if __name__ == "__main__":

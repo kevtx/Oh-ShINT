@@ -1,4 +1,5 @@
-from dotenv import dotenv_values
+import os
+
 
 from ..models.base_provider import BaseProvider
 from .AbuseIPDB import AbuseIPDB
@@ -13,12 +14,9 @@ __all__ = [
 
 
 def iter_load_providers(provider_list: list[str] = __all__):
-    for k, v in dotenv_values(".env").items():
-        if not v:
-            continue
-        for p in provider_list:
-            if k.upper() == p.upper():
-                yield globals()[p](token=v)
+    for p in __all__:
+        if p.upper() in [pl.upper() for pl in provider_list]:
+            yield globals()[p](token=os.getenv(f"{p.upper()}_API_KEY"))
 
 
 def load_provider(name: str) -> object | None:

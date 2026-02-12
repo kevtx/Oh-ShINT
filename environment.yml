@@ -2,6 +2,7 @@ name: Oh-ShINT
 channels:
   - defaults
 dependencies:
+  - certifi
   - conda-forge::pandas=3.0.0
   - conda-forge::regex=2026.1.15
   - conda-forge::rich=14.3.2
