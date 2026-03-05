@@ -8,6 +8,7 @@ dependencies:
   - conda-forge::rich=14.3.2
   - conda-forge::tinydb=4.8.2
   - conda-forge::typer=0.21.1
+  - boltons=25
   - httpx=0.28.1
   - jsonpath-ng=1.7.0
   - loguru=0.7.3
@@ -17,6 +18,7 @@ dependencies:
   - python=3.12.9
   - pytz=2025.2
   - typing_extensions=4.15.0
+  - validators=0.35
   - pip:
     - hishel[httpx]==1.1.9
     - tinydb-serialization==2.2.0

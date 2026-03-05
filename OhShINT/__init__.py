@@ -4,7 +4,7 @@ from sys import stderr
 from dotenv import find_dotenv, load_dotenv
 from loguru import logger
 
-from .providers import get_all_providers, iter_load_providers, load_provider
+from .Providers import get_all_providers, iter_load_providers, load_provider
 
 __all__ = [
     "get_all_providers",

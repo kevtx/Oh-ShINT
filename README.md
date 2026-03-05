@@ -68,7 +68,29 @@ Example:
 
 ## CLI / GUI
 
-The CLI and GUI entry points are currently scaffolded but not wired. Expect these to change as provider coverage expands.
+Launch the app:
+
+        python oh-shint.py gui
+
+or:
+
+        python -m OhShINT gui
+
+### GUI features
+
+- Search tab with IOC input and provider search execution
+- Results table (provider, status, summary)
+- Result details pane with full JSON/error payload for selected row
+- Settings tab to:
+  - View/hide API keys
+  - Set/update API keys per provider
+  - Enable/disable providers per search
+  - Save settings to `.env`
+
+### Settings keys written to `.env`
+
+- `ABUSEIPDB_API_KEY`, `ALIENVAULT_API_KEY`, `VIRUSTOTAL_API_KEY`
+- `ENABLE_ABUSEIPDB`, `ENABLE_ALIENVAULT`, `ENABLE_VIRUSTOTAL` (`1` or `0`)
 
 ## Development
 
