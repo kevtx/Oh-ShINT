@@ -1,6 +1,5 @@
 import os
 
-
 from ..models.base_provider import BaseProvider
 from .AbuseIPDB import AbuseIPDB
 from .AlienVault import AlienVault

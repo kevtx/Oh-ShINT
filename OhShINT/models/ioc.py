@@ -21,10 +21,10 @@ def _try_validate(value, *validators) -> bool:
                 return False
         except Exception:
             exc_info = ExceptionInfo.from_current()
-            logger.debug(
+            logger.trace(
                 f"Error validating value '{value}' with validator {validator.__name__}: {exc_info.exc_msg}"
             )
-            logger.debug(exc_info.get_formatted())
+            logger.trace(exc_info.get_formatted())
             return False
     return True
 
@@ -156,8 +156,8 @@ def ioc_regex_search(ioc: IOC | str, search_content: str) -> list[str]:
         regexp = REGEXP[ioc.cls]
     except KeyError as e:
         exc_info = ExceptionInfo.from_current()
-        logger.error(f"No regex found for IOC type {ioc.cn}: {exc_info.exc_msg}")
-        logger.debug(exc_info.get_formatted())
+        logger.trace(f"No regex found for IOC type {ioc.cn}: {exc_info.exc_msg}")
+        logger.trace(exc_info.get_formatted())
         raise e
 
     matches = re.findall(regexp, search_content)
@@ -186,10 +186,10 @@ def get_ioc_type(ioc_value: str) -> type[IOC]:
         except Exception:
             # Exceptions are expected from validation functions, so we catch and log them without interrupting the flow
             exc_info = ExceptionInfo.from_current()
-            logger.debug(
+            logger.trace(
                 f"Error validating IOC value '{ioc_value}' against type {typ.__name__}: {exc_info.exc_msg}"
             )
-            logger.debug(exc_info.get_formatted())
+            logger.trace(exc_info.get_formatted())
 
     rl = len(result)
     if rl == 0 or rl > 1:

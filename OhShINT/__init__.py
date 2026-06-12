@@ -1,23 +1,29 @@
 import os
 from sys import stderr
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 from loguru import logger
 
+from .models import IOC, MD5, SHA1, SHA256, Domain, IPv4, IPv6
 from .providers import get_all_providers, iter_load_providers, load_provider
 
 __all__ = [
-    "get_all_providers",
-    "load_provider",
-    "iter_load_providers",
     "ALL_PROVIDERS",
+    "Domain",
+    "get_all_providers",
+    "IPv4",
+    "IPv6",
+    "iter_load_providers",
+    "load_provider",
+    "MD5",
+    "SHA1",
+    "SHA256",
+    "IOC",
 ]
 
-DEFAULT_DOTENV_FILE = ".env"
-
-dotenv_path = find_dotenv(DEFAULT_DOTENV_FILE, raise_error_if_not_found=True)
-_ = load_dotenv(dotenv_path)
-logger.debug(f"Loaded environment variables from {dotenv_path}")
+__loaded = load_dotenv()
+if __loaded:
+    logger.debug(f"Loaded environment variables")
 
 logger.remove()
 ALL_PROVIDERS = get_all_providers()
