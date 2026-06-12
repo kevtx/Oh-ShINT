@@ -38,6 +38,7 @@ class BaseProvider:
     human_name: ClassVar[str] = ""
     api_base_url: ClassVar[str] = ""
     auth_token_name: ClassVar[str] = ""
+    enabled: bool = True
 
     token: str | None = field(default=None, repr=False)
     timeout: int = 30
@@ -87,11 +88,15 @@ class BaseProvider:
         """
         if self._client is None:
             self._ensure_base_url()
-            
+
             # Extract proxy from environment variables following standard conventions
-            proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy") or \
-                    os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
-            
+            proxy = (
+                os.getenv("HTTPS_PROXY")
+                or os.getenv("https_proxy")
+                or os.getenv("HTTP_PROXY")
+                or os.getenv("http_proxy")
+            )
+
             self._client = httpx.Client(
                 base_url=self.api_base_url,
                 auth=self.auth,
