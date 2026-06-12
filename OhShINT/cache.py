@@ -22,9 +22,13 @@ def get_cache_transport(proxy: str | None = None) -> SyncCacheTransport:
     """
     # Extract proxy from environment variables if not explicitly provided
     if proxy is None:
-        proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy") or \
-                os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
-    
+        proxy = (
+            os.getenv("HTTPS_PROXY")
+            or os.getenv("https_proxy")
+            or os.getenv("HTTP_PROXY")
+            or os.getenv("http_proxy")
+        )
+
     return SyncCacheTransport(
         storage=storage,
         next_transport=httpx.HTTPTransport(proxy=proxy, verify=certifi.where()),
